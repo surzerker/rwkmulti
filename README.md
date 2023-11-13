@@ -1,5 +1,5 @@
 
-# Race War Kingdoms Multi-Character Control Script (rwkmulti.py)
+# Race War Kingdoms Multibox Script (rwkmulti.py)
 
 **Version:** 0.1.1
 
