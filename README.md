@@ -3,7 +3,7 @@
 
 **Version:** 0.1.1
 
-**Author:** Surzerker (S2) or [gnorman.dev@protonmail.com](mailto:gnorman.dev@protonmail.com)
+**Author:** Surzerker (S2)
 
 This Python script allows you to control multiple characters simultaneously in Race War Kingdoms. It has been approved by Glitchless on 11/13/2023 with the stipulation that no additional logic can be included.
 
