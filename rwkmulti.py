@@ -11,8 +11,8 @@
 #    - Run the command `pip install selenium keyboard`
 
 # To run the script, open the directory containing this Python script (rwkmulti.py) in the Command Prompt (CMD) and enter the command: `python rwkmulti.py`.
-# After running the script, the specified number of Firefox windows will be launched automatically.
-# Log into RWK in each Firefox window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Firefox) and then clicking submit.
+# After running the script, the specified number of Chrome windows will be launched automatically.
+# Log into RWK in each Chrome window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Chrome) and then clicking submit.
 
 
 from selenium import webdriver
@@ -33,9 +33,9 @@ drivers = []
 # Create a dictionary to keep track of key states for each driver
 key_states = {driver: {} for driver in drivers}
 
-# Create the specified number of Firefox browser instances
+# Create the specified number of Chrome browser instances
 for i in range(num_game_windows):
-    driver = webdriver.Firefox()
+    driver = webdriver.Chrome()
     drivers.append(driver)
 
 # Open the URL in each window
