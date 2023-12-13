@@ -23,7 +23,7 @@ Follow these instructions to set up and run the script:
     pip install selenium keyboard
     ```
 
-3. **Download Chrome:** If you don't have Chrome installed, you can download the latest version from [here]([https://www.mozilla.org/firefox/new/](https://www.google.com/chrome/dr/download/).
+3. **Download Chrome:** If you don't have Chrome installed, you can download the latest version from [here](https://www.google.com/chrome/dr/download/).
 
 ## Running the Script
 
@@ -39,6 +39,6 @@ To run the script, follow these steps:
    python rwkmulti.py
    ```
 
-After running the script, the specified number of Firefox windows will be launched automatically. You can log into Race War Kingdoms in each Firefox window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Firefox) and then clicking submit.
+After running the script, the specified number of Chrome windows will be launched automatically. You can log into Race War Kingdoms in each Chrome window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Chrome) and then clicking submit.
 
 If you encounter any issues or need assistance setting up the script, please feel free to reach out to the author for support.
