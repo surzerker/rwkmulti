@@ -1,7 +1,7 @@
 
 # Race War Kingdoms Multibox Script (rwkmulti.py)
 
-**Version:** 0.1.1
+**Version:** 0.1.2
 
 **Author:** Surzerker (S2)
 
@@ -23,11 +23,7 @@ Follow these instructions to set up and run the script:
     pip install selenium keyboard
     ```
 
-3. **Download Firefox:** If you don't have Firefox installed, you can download the latest version from [here](https://www.mozilla.org/firefox/new/).
-
-4. **Download GeckoDriver:** To use the script, you'll need the appropriate version of GeckoDriver for your Firefox installation. You can download it from [here](https://github.com/mozilla/geckodriver/releases).
-
-5. **Add GeckoDriver to Your System's PATH:** Place the downloaded GeckoDriver executable in a directory that is included in your system's PATH. For example, you can copy it to `C:\windows\system32\`.
+3. **Download Chrome:** If you don't have Chrome installed, you can download the latest version from [here]([https://www.mozilla.org/firefox/new/](https://www.google.com/chrome/dr/download/).
 
 ## Running the Script
 
