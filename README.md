@@ -50,7 +50,7 @@ To run the script, follow these steps:
 
 5. Log into RWK in each Firefox window.
 
-6. Once logged in, you can control all characters simultaneously using your keyboard. Press `CTRL+P` to toggle the pause mode, which allows you to temporarily stop broadcasting keystrokes to the game windows.
+6. Once logged in, you can control all characters simultaneously using your keyboard. Press `CTRL+.` to toggle the pause mode, which allows you to temporarily stop broadcasting keystrokes to the game windows.
 
 7. To exit the script, press `CTRL+C` in the command terminal or close the command terminal.
 
