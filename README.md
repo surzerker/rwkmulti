@@ -21,7 +21,7 @@ Before you can use this script, you need to ensure that your system meets the fo
 3. **Firefox Browser:** The script is designed to work with Mozilla Firefox. If you don't have Firefox installed, download it from [https://www.mozilla.org/firefox/new/](https://www.mozilla.org/firefox/new/).
 
 4. **GeckoDriver:** You need the GeckoDriver to interface with Firefox through Selenium.
-A copy of the geckodriver has been included in this repository for your convenience, otherwise you can download the appropriate version for your system from [https://github.com/mozilla/geckodriver/releases](https://github.com/mozilla/geckodriver/releases). After downloading, extract the executable and place it in a directory included in your system's PATH, such as `C:\Windows\system32` on Windows.
+A copy of the geckodriver has been included in this repository for your convenience. You can also download the appropriate version for your system from [https://github.com/mozilla/geckodriver/releases](https://github.com/mozilla/geckodriver/releases). After downloading, extract the executable and place it in a directory included in your system's PATH, such as `C:\Windows\system32` on Windows.
 
 ## Installation
 
