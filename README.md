@@ -1,6 +1,6 @@
-# RWK Multibox Client
+# rwkmulti (RWK Multibox Client)
 
-rwkmulti.py is a Python script that allows you to control multiple characters simultaneously in the game Race War Kingdoms. This utility has been specifically approved for use with this game, adhering to its guidelines and restrictions.
+rwkmulti is a Python script that allows you to control multiple characters simultaneously in the game Race War Kingdoms. This utility has been specifically approved for use with this game, adhering to its guidelines and restrictions.
 
 ## Disclaimer
 
