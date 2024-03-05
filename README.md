@@ -52,10 +52,10 @@ To run the script, follow these steps:
 
 6. Once logged in, you can control all characters simultaneously using your keyboard. Press `CTRL+P` to toggle the pause mode, which allows you to temporarily stop broadcasting keystrokes to the game windows.
 
-7. To exit the script, press `q`.
+7. To exit the script, press `CTRL+C` in the command terminal or close the command terminal.
 
 ## Support
 
 If you encounter any issues or require assistance, please feel free to open an issue on the GitHub repository.
 
-Thank you for using the RWK Multibox Client!
+Thank you for using rwkmulti!
