@@ -1,4 +1,4 @@
-# rwkmulti.py (version 0.3.5)
+# rwkmulti.py (version 0.3.4)
 # Author: Surzerker (S2)
 # This script allows you to control multiple characters simultaneously in Race War Kingdoms. It has been approved by Glitchless on 11/13/2023 with the stipulation that no additional logic can be included.
 # If you encounter issues or need assistance setting up this script, please feel free to reach out.
@@ -18,6 +18,7 @@
 # Log into RWK in each Firefox window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Firefox) and then clicking submit.
 
 #0.3.4: added execution of arrange.py script to arrrange windows
+#   - Run the command `pip install pygetwindow pyautogui` to install required packages.
 
 import os
 from selenium import webdriver
