@@ -1,4 +1,4 @@
-# rwkmulti.py (version 0.3.2)
+# rwkmulti.py (version 0.3.5)
 # Author: Surzerker (S2)
 # This script allows you to control multiple characters simultaneously in Race War Kingdoms. It has been approved by Glitchless on 11/13/2023 with the stipulation that no additional logic can be included.
 # If you encounter issues or need assistance setting up this script, please feel free to reach out.
@@ -17,7 +17,9 @@
 # After running the script, the specified number of Firefox windows will be launched automatically.
 # Log into RWK in each Firefox window by copying and pasting your username(s) and password(s) into RWK from notepad (or using saved passwords in Firefox) and then clicking submit.
 
+#0.3.4: added execution of arrange.py script to arrrange windows
 
+import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -25,7 +27,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import keyboard
 from selenium.webdriver.common.keys import Keys
 
-print("\n ☺️ RWK Multibox Client started...\n (Wait for all browser windows to open before taking any action.)\n\n Press the CTRL and period keys simultaneously [CTRL+.] to PAUSE/UNPAUSE broadcasting of keys to browser windows.\n To exit this application, close the command terminal or type [CTRL+C].\n")
+print("\n RWK Multibox Client started...\n (Wait for all browser windows to open before taking any action.)\n\n Press the CTRL and period keys simultaneously [CTRL+.] to PAUSE/UNPAUSE broadcasting of keys to browser windows.\n To exit this application, close the command terminal or type [CTRL+C].\n")
 
 # Set the number of game windows you want to control (default: 4)
 num_game_windows = 4
@@ -48,6 +50,12 @@ for i in range(num_game_windows):
 url = "https://rwk2.racewarkingdoms.com/"
 for driver in drivers:
     driver.get(url)
+
+# Execute arrange.py from t he same directory
+try:
+    os.system("python arrange.py")
+except:
+    print("Execitom of arrange.py failed.  Please make sure the file is in the same directory as rwkmulti.py")
 
 # Wait for each window to load and get its handle
 for driver in drivers:
