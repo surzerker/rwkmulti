@@ -11,7 +11,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 
 - **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this issue.
 - **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
-- **Script File:** The script file is named `rwkmulti_v4.pyw` and launches the GUI without opening a command prompt or terminal.
+- **Script File:** The script file is named `rwkmulti-v4.pyw` and launches the GUI without opening a command prompt or terminal.
 
 ## New Features (v5)
 
@@ -45,11 +45,11 @@ Before running this script, ensure the following are installed:
 
 ## Installation
 
-Simply download the `rwkmulti_v4.pyw` file and place it anywhere convenient on your computer.
+Simply download the `rwkmulti-v4.pyw` file and place it anywhere convenient on your computer.
 
 ## Usage
 
-1. Double-click `rwkmulti_v4.pyw` to launch the GUI.
+1. Double-click `rwkmulti-v4.pyw` to launch the GUI.
 
 2. The GUI allows you to:
    - Set the number of game windows.
@@ -66,7 +66,7 @@ Simply download the `rwkmulti_v4.pyw` file and place it anywhere convenient on y
 
 ### Customizing Ignored Keys
 
-The script supports selective ignoring of keystrokes for specific characters. Edit line 77 (approximately) in `rwkmulti_v4.pyw`:
+The script supports selective ignoring of keystrokes for specific characters. Edit line 77 (approximately) in `rwkmulti-v4.pyw`:
 
 ```python
 self.ignore_keys = {
