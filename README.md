@@ -13,7 +13,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 - **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
 - **Script File:** The script file is named `rwkmulti-v4.pyw` and launches the GUI without opening a command prompt or terminal.
 
-## New Features (v5)
+## New Features (v4)
 
 - **Multi-threaded Performance:**  
   The script now uses a multi-threaded approach to dramatically improve performance, resulting in faster, more responsive gameplay across multiple windows.
