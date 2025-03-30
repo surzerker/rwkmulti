@@ -1,3 +1,4 @@
+
 # rwkmulti (RWK Multibox Client)
 
 rwkmulti is a Python script that allows you to control multiple characters simultaneously in the game Race War Kingdoms. This utility has been specifically approved for use with this game, adhering to its guidelines and restrictions.
@@ -6,56 +7,102 @@ rwkmulti is a Python script that allows you to control multiple characters simul
 
 This software is provided "as is," without warranty of any kind, express or implied. In no event shall the author be liable for any claim, damages, or other liabilities, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software. Use this script at your own risk. The author is not responsible for any data loss, hardware damage, or other consequences that may result from the software's use.
 
+## Important Notes
+
+- **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this issue.
+- **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
+- **Script File Update:** The script has been changed to a `.pyw` file, which launches the GUI without opening a command prompt or terminal window.
+
 ## Prerequisites
 
-Before you can use this script, you need to ensure that your system meets the following requirements:
+Before running this script, ensure the following are installed:
 
-1. **Python 3:** The script is written in Python and requires Python 3 to run. If you don't have Python 3 installed, download and install it from [https://www.python.org/downloads/](https://www.python.org/downloads/).
+1. **Python 3:**  
+   [Download Python 3](https://www.python.org/downloads/).
 
-2. **Selenium and Keyboard Libraries:** The script uses Selenium for browser automation and the Keyboard library to listen to keyboard events. Install them using pip:
-
-   ```
+2. **Required Python Libraries:**  
+   Install these with pip:
+   ```sh
    pip install selenium keyboard
    ```
 
-3. **Firefox Browser:** The script is designed to work with Mozilla Firefox. If you don't have Firefox installed, download it from [https://www.mozilla.org/firefox/new/](https://www.mozilla.org/firefox/new/).
+3. **Firefox Browser:**  
+   [Download Firefox](https://www.mozilla.org/firefox/new/) and ensure it's updated to the latest version.
 
-4. **GeckoDriver:** You need the GeckoDriver to interface with Firefox through Selenium. Download the appropriate version for your system from [https://github.com/mozilla/geckodriver/releases](https://github.com/mozilla/geckodriver/releases). After downloading, extract the executable and place it in a directory included in your system's PATH, such as `C:\Windows\system32` on Windows.
+4. **GeckoDriver (if necessary):**  
+   If you're using an OS or setup where GeckoDriver is required (typically older Windows versions), download it from the [official repository](https://github.com/mozilla/geckodriver/releases). Place the executable in a system PATH directory, such as `C:\Windows\system32`.
 
 ## Installation
 
-To set up the RWK Multibox Client, follow these steps:
+Follow these steps to set up RWK Multibox Client:
 
-1. Clone or download the repository to your local machine.
+1. **Clone the Repository:**
+   ```sh
+   git clone https://github.com/yourusername/rwkmulti.git
+   cd rwkmulti
+   ```
 
-2. Open a terminal or command prompt window and navigate to the directory where you saved the script.
+2. **Install Dependencies:**
+   ```sh
+   pip install -r requirements.txt
+   ```
 
-3. Ensure that you have completed all the prerequisite steps, including installing Python 3, Selenium, the Keyboard library, Firefox, and GeckoDriver.
+3. **Run the Script:**
+   ```sh
+   pythonw rwkmulti.pyw
+   ```
 
 ## Usage
 
-To run the script, follow these steps:
+1. **Launching and GUI Controls:**  
+   Running the script opens a GUI where you can:
+   - Set the number of game windows.
+   - Start, pause, or resume your multibox session.
+   - Copy logs for troubleshooting.
 
-1. Open a command prompt or terminal window.
+2. **Gameplay Instructions:**  
+   After launching, the script opens multiple Firefox windows. Log into Race War Kingdoms in each window. Your keystrokes will broadcast simultaneously to all windows.
 
-2. Navigate to the directory containing `rwkmulti.py`.
+   - Use `CTRL+.` to toggle pause mode, stopping key broadcasts temporarily.
+   - To close the application, exit from the GUI.
 
-3. Execute the script by running:
+## Configuration
 
-   ```
-   python rwkmulti.py
-   ```
+### Customizing Ignored Keys
 
-4. The script will launch the specified number of Firefox windows and navigate to the Race War Kingdoms login page.
+The script supports selective ignoring of keystrokes for specific characters. Edit line 77 (approximately) in `rwkmulti.pyw`:
 
-5. Log into RWK in each Firefox window.
+```python
+self.ignore_keys = {
+    "Surzerker": ["c"],
+    "Cid": ["c"],
+    "Spongebob": ["a"],
+    "Buu": ["a"]
+    # Add custom character key ignores below, e.g.:
+    # "YourCharacterName": ["key1", "key2"]
+}
+```
 
-6. Once logged in, you can control all characters simultaneously using your keyboard. Press `CTRL+.` to toggle the pause mode, which allows you to temporarily stop broadcasting keystrokes to the game windows.
+Update this dictionary to suit your needs, adding or removing keys as desired.
 
-7. To exit the script, press `CTRL+C` in the command terminal or close the command terminal.
+## Troubleshooting
 
-## Support
+- **Pages scrolling when keys are sent:**  
+  Update Firefox to the latest version.
 
-If you encounter any issues or require assistance, please feel free to open an issue on the GitHub repository.
+- **GeckoDriver not found (Windows 11):**  
+  Generally, GeckoDriver is not needed. If issues persist, double-check your Firefox installation.
+
+- **General issues:**  
+  Confirm all dependencies are installed, review logs within the GUI, and check for conflicts with security software.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file included in this repository.
+
+## Support and Contributions
+
+- **Need Help?** Open an issue in the GitHub repository.
+- **Want to Contribute?** Fork the repository and submit pull requests to contribute improvements.
 
 Thank you for using rwkmulti!
