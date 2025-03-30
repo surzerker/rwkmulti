@@ -13,6 +13,17 @@ This software is provided "as is," without warranty of any kind, express or impl
 - **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
 - **Script File:** The script file is named `rwkmulti_v4.pyw` and launches the GUI without opening a command prompt or terminal.
 
+## New Features (v5)
+
+- **Multi-threaded Performance:**  
+  The script now uses a multi-threaded approach to dramatically improve performance, resulting in faster, more responsive gameplay across multiple windows.
+
+- **GUI Log Output:**  
+  The new GUI incorporates real-time logging directly within the interface, allowing for easier troubleshooting and monitoring of script activity.
+
+- **Advanced Ignore Keys:**  
+  Enhanced capability to selectively specify keys to ignore for any character, allowing custom configurations for individual characters as clarified by Jeff on 3/29/2025.
+
 ## Prerequisites
 
 Before running this script, ensure the following are installed:
