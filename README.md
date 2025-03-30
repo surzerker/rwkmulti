@@ -11,7 +11,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 
 - **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this issue.
 - **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
-- **Script File Update:** The script has been changed to a `.pyw` file, which launches the GUI without opening a command prompt or terminal window.
+- **Script File:** The script file is named `rwkmulti_v5.pyw` and launches the GUI without opening a command prompt or terminal.
 
 ## Prerequisites
 
@@ -21,56 +21,41 @@ Before running this script, ensure the following are installed:
    [Download Python 3](https://www.python.org/downloads/).
 
 2. **Required Python Libraries:**  
-   Install these with pip:
+   Install these with pip3:
    ```sh
-   pip install selenium keyboard
+   pip3 install selenium keyboard
    ```
 
 3. **Firefox Browser:**  
    [Download Firefox](https://www.mozilla.org/firefox/new/) and ensure it's updated to the latest version.
 
 4. **GeckoDriver (if necessary):**  
-   If you're using an OS or setup where GeckoDriver is required (typically older Windows versions), download it from the [official repository](https://github.com/mozilla/geckodriver/releases). Place the executable in a system PATH directory, such as `C:\Windows\system32`.
+   Only required for older Windows versions. [Download GeckoDriver](https://github.com/mozilla/geckodriver/releases). Place the executable in a PATH directory, such as `C:\Windows\system32`.
 
 ## Installation
 
-Follow these steps to set up RWK Multibox Client:
-
-1. **Clone the Repository:**
-   ```sh
-   git clone https://github.com/yourusername/rwkmulti.git
-   cd rwkmulti
-   ```
-
-2. **Install Dependencies:**
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Script:**
-   ```sh
-   pythonw rwkmulti.pyw
-   ```
+Simply download the `rwkmulti_v5.pyw` file and place it anywhere convenient on your computer.
 
 ## Usage
 
-1. **Launching and GUI Controls:**  
-   Running the script opens a GUI where you can:
+1. Double-click `rwkmulti_v5.pyw` to launch the GUI.
+
+2. The GUI allows you to:
    - Set the number of game windows.
    - Start, pause, or resume your multibox session.
    - Copy logs for troubleshooting.
 
-2. **Gameplay Instructions:**  
-   After launching, the script opens multiple Firefox windows. Log into Race War Kingdoms in each window. Your keystrokes will broadcast simultaneously to all windows.
+3. Log into Race War Kingdoms in each Firefox window opened by the script.
 
-   - Use `CTRL+.` to toggle pause mode, stopping key broadcasts temporarily.
-   - To close the application, exit from the GUI.
+4. Your keystrokes will be broadcast simultaneously to all windows:
+   - Press `CTRL+.` to toggle pause mode.
+   - Close the application by closing the GUI window.
 
 ## Configuration
 
 ### Customizing Ignored Keys
 
-The script supports selective ignoring of keystrokes for specific characters. Edit line 77 (approximately) in `rwkmulti.pyw`:
+The script supports selective ignoring of keystrokes for specific characters. Edit line 77 (approximately) in `rwkmulti_v5.pyw`:
 
 ```python
 self.ignore_keys = {
@@ -83,26 +68,21 @@ self.ignore_keys = {
 }
 ```
 
-Update this dictionary to suit your needs, adding or removing keys as desired.
+Update this dictionary to suit your needs.
 
 ## Troubleshooting
 
-- **Pages scrolling when keys are sent:**  
-  Update Firefox to the latest version.
-
-- **GeckoDriver not found (Windows 11):**  
-  Generally, GeckoDriver is not needed. If issues persist, double-check your Firefox installation.
-
-- **General issues:**  
-  Confirm all dependencies are installed, review logs within the GUI, and check for conflicts with security software.
+- **Pages scrolling when keys are sent:** Update Firefox.
+- **GeckoDriver not found (Windows 11):** Generally unnecessary; ensure Firefox is updated.
+- **Other Issues:** Ensure all prerequisites are installed and review GUI logs.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file included in this repository.
+This project is licensed under the MIT License.
 
 ## Support and Contributions
 
-- **Need Help?** Open an issue in the GitHub repository.
-- **Want to Contribute?** Fork the repository and submit pull requests to contribute improvements.
+- **Need Help?** Open an issue on GitHub.
+- **Want to Contribute?** Submit pull requests with improvements.
 
 Thank you for using rwkmulti!
