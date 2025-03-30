@@ -81,7 +81,7 @@ class RWKMultiClient:
             "Surzerker": ["c"],
             "Cid": ["c"],
             "Spongebob": ["a"],
-            "Buu": ["a"],
+            "Buu": ["a"]
             # Add custom character key ignores below, e.g.:
             # "YourCharacterName": ["key1", "key2"]
         }
