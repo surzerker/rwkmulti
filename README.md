@@ -1,117 +1,116 @@
+
 # rwkmulti (RWK Multibox Client)
 
-rwkmulti is a Python script that allows you to control multiple characters simultaneously in the game Race War Kingdoms. This utility has been specifically approved for use with this game, adhering to its guidelines and restrictions.
+**rwkmulti** is a Python script designed to control multiple characters at once in **Race War Kingdoms**. It’s explicitly approved for use with this game, following its rules and restrictions.
 
 ## Disclaimer
 
-This software is provided "as is," without warranty of any kind, express or implied. In no event shall the author be liable for any claim, damages, or other liabilities, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software. Use this script at your own risk. The author is not responsible for any data loss, hardware damage, or other consequences that may result from the software's use.
+This software is provided **"as is,"** with no warranties, express or implied. The author isn’t liable for any damages, data loss, or issues arising from its use. Run it at your own risk.
 
 ## Important Notes
 
-- **We now use `rwkmulti-latest.pyw` as the main script.**
-- **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this.
-- **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
+- The main script is now `rwkmulti-latest.pyw`.
+- Use the latest Firefox version to avoid a bug where pages scroll when keys are sent.
+- Windows 11 users typically don’t need GeckoDriver—Selenium works directly with Firefox.
 
-## What's New
+## What’s New
 
-### Recent Changes & Bugfixes
-1. **Fixed occasional key-sending failure:** Resolved a bug that sometimes prevented keystrokes from being sent to all windows.
-2. **Key queue improvement:** Previously, if too many keys were pressed rapidly, the script would lag or hang. It now keeps only the last two pressed keys in the queue, preventing the buildup that caused the slowdown.
-3. **Load default Firefox profile:**  
-   - By default, the script can now load your main Firefox profile instead of creating a temporary profile. This lets you use saved credentials, cookies, and other profile-specific data. (Thanks to Cagedangel for suggesting this feature.)
-4. **New naming convention:** The script is now named `rwkmulti-latest.pyw` to accomodate the new auto-update feature.
-5. **Auto-update support:**  
-   - At startup, the script checks if a newer version is available and offers to download it if you’re out-of-date.
-   - Prevents overwriting of user-specific config files during the update process.
-6. **Config button & config file (`rwkmulti_settings.cfg`):**  
-   - A new button in the GUI opens a config panel or edits the text file.
-   - Stores the user’s preferred server URL, default Firefox profile setting, and key ignore settings so they persist between updates.
-7. **Additional error handling:** If any required Python library is not installed, the script shows a popup explaining how to install the missing dependencies (e.g., Selenium, Keyboard, Requests).
+### Recent Updates & Fixes
+
+- **Fixed Key-Sending Glitches:** No more missed keystrokes across windows.
+- **Improved Key Queue:** Limits the queue to the last two pressed keys, preventing lag from rapid inputs.
+- **Default Firefox Profile:** Optionally loads your main Firefox profile (with saved logins/cookies) instead of a temporary one. *(Thanks, Cagedangel!)*
+- **New Name:** Renamed to `rwkmulti-latest.pyw` for auto-update support.
+- **Auto-Update Feature:** Checks for updates on startup and prompts to download if a newer version exists, preserving your config during updates.
+- **Config Button & File:** A **Config** button opens an editor for `rwkmulti_settings.cfg`, storing your server URL, profile setting, and key ignore preferences.
+- **Better Error Handling:** Popups guide you to install missing libraries (e.g., Selenium) if needed.
 
 ## Prerequisites
 
-1. **Python 3**  
-   [Download Python 3](https://www.python.org/downloads/).
+### Python 3
+- [Download from python.org](https://www.python.org/downloads/).
 
-2. **Required Python Libraries**  
-   Install these with pip (or pip3, depending on your setup):
-   ```sh
-   pip install selenium keyboard requests
-   ```
-   - **`selenium`**: Automates Firefox
-   - **`keyboard`**: Detects and broadcasts keystrokes
-   - **`requests`**: Required for auto-update checks
+### Python Libraries
+Install via pip:
 
-3. **Firefox Browser**  
-   [Download Firefox](https://www.mozilla.org/firefox/new/) and ensure it's updated to the latest version.
+```bash
+pip install selenium keyboard requests
+```
+- **`selenium`**: Drives Firefox automation.
+- **`keyboard`**: Captures and sends keystrokes.
+- **`requests`**: Enables auto-updates.
 
-4. **GeckoDriver (if necessary)**  
-   Only required for older Windows versions. [Download GeckoDriver](https://github.com/mozilla/geckodriver/releases). Place the executable in a directory on your system PATH (e.g., `C:\Windows\system32`).
+### Firefox Browser
+- [Get the latest version from mozilla.org](https://www.mozilla.org/firefox/new/).
+
+### GeckoDriver (Optional)
+Only needed for older Windows versions. [Download from GitHub](https://github.com/mozilla/geckodriver/releases) and add to your PATH (e.g., `C:\Windows\System32`).
 
 ## Installation
 
-1. Download `rwkmulti-latest.pyw` and place it anywhere convenient on your computer.
-2. Double-click `rwkmulti-latest.pyw` to launch the GUI.
+1. Download `rwkmulti-latest.pyw` and save it anywhere on your computer.
+2. Double-click to run it.
 
 ## Usage
 
-1. **Launch the script**  
-   - Double-click `rwkmulti-latest.pyw`.  
-   - If an update is available, you’ll be prompted to download it.
+### Start the Script
+- Launch `rwkmulti-latest.pyw`.
+- If an update’s available, you’ll get a prompt to download it.
 
-2. **Configuring Windows**  
-   - Enter the number of Firefox windows to open.
-   - The script can automatically load your primary Firefox profile, using existing credentials and cookies (if configured).
+### Set Up Windows
+- Enter how many Firefox windows you want (default: 12).
+- Optionally use your default Firefox profile for saved logins.
 
-3. **Control Panel Buttons**  
-   - **Start**: Opens the specified number of Firefox windows.
-   - **Resume/Pause**: Toggles broadcasting keystrokes.
-   - **Config**: Opens a config panel (or automatically edits the `rwkmulti_settings.cfg` file).
+### GUI Controls
+- **Start**: Opens your specified number of Firefox windows.
+- **Pause/Resume**: Toggles keystroke broadcasting *(button text changes based on state)*.
+- **Config**: Opens a window to edit settings *(or tweak `rwkmulti_settings.cfg` manually)*.
+- **Copy Logs**: Copies the log output to your clipboard.
 
-4. **Gameplay**  
-   - Log into Race War Kingdoms in each opened Firefox window.
-   - Your keystrokes will be broadcast simultaneously to all windows.  
-   - Close by exiting the GUI or stopping the program.
+### Play the Game
+- Log into Race War Kingdoms in each window.
+- Keystrokes (e.g., arrows, letters) broadcast to all windows simultaneously.
+- Close the GUI to exit.
 
 ## Configuration
 
-### Customizing Ignored Keys per Character
+Settings live in `rwkmulti_settings.cfg`, created on first run. Edit via the **Config** button or Notepad.
 
-Your ignore settings are stored in the `rwkmulti_settings.cfg` file (or you can access them through the Config button in the GUI). This file includes lines that specify which keys should be ignored for each character, for example:
+### Example Config File
 
+```ini
+[Settings]
+# Server URL to connect to
+server_url = https://r2p3.racewarkingdoms.com/
+# Use default Firefox profile (0 = no, 1 = yes)
+use_default_profile = 0
+# Number of game windows to open
+num_game_windows = 12
+# Ignore keys by window title pattern (JSON format, e.g., {"Pattern": ["key1", "key2"]})
+ignore_keys = {"Surzerker": ["c"], "Spongebob": ["a"]}
 ```
-[IgnoreKeys]
-Surzerker = c
-Cid = c
-Spongebob = a
-Buu = a
-```
 
-Adjust these lines as needed to suit your preferences.
+- **Server URL:** Set your preferred Race War Kingdoms server.
+- **Firefox Profile:** Toggle to `1` to use your main profile.
+- **Number of Windows:** Adjust how many windows open.
+- **Ignore Keys:** Define keys to block per window title *(e.g., `"Surzerker": ["c"]` stops `c` for titles containing "Surzerker")*. Edit the JSON to match your characters.
 
-### Server URL & Profile Settings
-
-The `rwkmulti_settings.cfg` file also lets you set:
-- **Server URL**: The Race War Kingdoms server or environment you want to launch.
-- **Default Firefox Profile**: By specifying this, the script won’t create a new temporary profile.
-
-These settings persist even if you update the script using the auto-updater.
+Changes persist across updates and apply on the next **Start** *(some, like profile settings, need a restart)*.
 
 ## Troubleshooting
 
-- **Keystroke scrolling in Firefox**: Update Firefox.
-- **GeckoDriver not found (Windows 11)**: Rarely needed; ensure Firefox is up to date.
-- **Missing libraries**: If you encounter an error, a popup should appear explaining how to install the missing library via pip.
-- **Script won’t auto-update**: Ensure you have the `requests` library installed.  
-- **Still stuck?**: Check the GUI log output for more details, or edit the config file manually.
+- **Keys Scroll Pages:** Update Firefox to the latest version.
+- **GeckoDriver Errors:** Rare on Windows 11; ensure Firefox is current.
+- **Missing Libraries:** A popup will show install commands *(e.g., `pip install selenium`)*.
+- **No Auto-Update:** Verify `requests` is installed.
+- **Config Not Updating:** Edit in Notepad, save, then click **Config** to see changes—or restart the script.
+- **Logs:** Check the GUI’s log for error details.
 
 ## License
 
-This project is licensed under the MIT License.
+MIT License—free to use, modify, and share.
 
-## Support and Contributions
+## Support & Contributions
 
-- **Need Help?** Open an issue in the project’s repository.
-- **Want to Contribute?** Submit pull requests with improvements or bugfixes.
-
-Thank you for using rwkmulti!
+- **Help:** File an issue on the repo.
+- **Contribute:** Submit pull requests with fixes or features.
