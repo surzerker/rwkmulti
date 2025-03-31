@@ -40,8 +40,9 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     url = "https://r2p3.racewarkingdoms.com/"
     driver.get(url)
     wait = WebDriverWait(driver, 10)
-    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
     
+    # Initial body fetch
+    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
     driver.maximize_window()
@@ -60,12 +61,20 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                     if pattern.lower() in window_title
                 )
                 if not should_ignore:
-                    log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {input_key} to {window_title}")
-                    body.send_keys(selenium_key)
+                    try:
+                        body.send_keys(selenium_key)
+                        log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {input_key} to {window_title}")
+                    except EC.StaleElementReferenceException:
+                        log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
+                        body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                        ActionChains(driver).move_to_element(body).click().perform()
+                        body.send_keys(selenium_key)
+                        log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {input_key} to {window_title} after refresh")
             except queue.Empty:
                 continue
             except Exception as e:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} error sending keys: {str(e)}")
+        time.sleep(0.01)  # Small delay to reduce CPU load
     driver.quit()
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
 
@@ -82,8 +91,6 @@ class RWKMultiClient:
             "Cid": ["c"],
             "Spongebob": ["a"],
             "Buu": ["a"]
-            # Add custom character key ignores below, e.g.:
-            # "YourCharacterName": ["key1", "key2"]
         }
         
         self.log_queue = mp.Queue()
@@ -91,9 +98,8 @@ class RWKMultiClient:
         
         self.create_widgets()
         self.master.protocol("WM_DELETE_WINDOW", self.close_application)
-        # Make row 2 (Text widget) expandable
         self.master.grid_rowconfigure(2, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)  # Optional: expand width too
+        self.master.grid_columnconfigure(0, weight=1)
         self.update_gui()
 
     def create_widgets(self):
@@ -110,7 +116,6 @@ class RWKMultiClient:
         self.copy_logs_button = Button(self.master, text="Copy Logs", command=self.copy_logs)
         self.copy_logs_button.grid(row=1, column=1)
 
-        # Remove fixed height to allow dynamic resizing
         self.output_text = Text(self.master, width=50, wrap=WORD, bg="black", fg="white")
         self.output_text.grid(row=2, column=0, columnspan=2, sticky="nsew")
 
