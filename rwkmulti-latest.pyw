@@ -11,7 +11,7 @@ import json
 # Default settings (used if no config file exists)
 DEFAULT_SERVER_URL = "https://r2p3.racewarkingdoms.com/"
 DEFAULT_USE_DEFAULT_PROFILE = 0
-DEFAULT_NUM_GAME_WINDOWS = 12
+DEFAULT_NUM_GAME_WINDOWS = 4
 DEFAULT_IGNORE_KEYS = {
     "Surzerker": ["c"],
     "Spongebob": ["a"]
