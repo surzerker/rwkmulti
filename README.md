@@ -18,8 +18,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 1. **Fixed occasional key-sending failure:** Resolved a bug that sometimes prevented keystrokes from being sent to all windows.
 2. **Key queue improvement:** Previously, if too many keys were pressed rapidly, the script would lag or hang. It now keeps only the last two pressed keys in the queue, preventing the buildup that caused the slowdown.
 3. **Load default Firefox profile:**  
-   - By default, the script can now load your main Firefox profile instead of creating a temporary profile. This lets you use saved credentials, cookies, and other profile-specific data.
-   - Thanks to Cagedangel for this feature suggestion!
+   - By default, the script can now load your main Firefox profile instead of creating a temporary profile. This lets you use saved credentials, cookies, and other profile-specific data. Special thanks to Cagedangel for this feature suggestion!
 4. **New naming convention:** The script is now named `rwkmulti-latest.pyw` to accomodate the new auto-update feature.
 5. **Auto-update support:**  
    - At startup, the script checks if a newer version is available and offers to download it if you’re out-of-date.
