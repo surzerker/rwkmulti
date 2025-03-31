@@ -17,7 +17,7 @@ import requests
 import sys
 
 # Current version of this script
-VERSION = "1.3.1"
+VERSION = "1.0.0"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
 USE_DEFAULT_PROFILE = 0
@@ -28,8 +28,9 @@ GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti
 def check_for_updates(log_queue):
     log_queue.put("MainProcess: Checking for updates...")
     try:
-        # Fetch the remote file content
-        response = requests.get(GITHUB_URL, timeout=5)
+        # Fetch the remote file content, no cache
+        headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
+        response = requests.get(GITHUB_URL, headers=headers, timeout=5)
         response.raise_for_status()
         remote_content = response.text
         log_queue.put("MainProcess: Successfully fetched remote file")
@@ -48,32 +49,28 @@ def check_for_updates(log_queue):
         # Compare versions
         local_ver_tuple = tuple(map(int, VERSION.split(".")))
         remote_ver_tuple = tuple(map(int, remote_version.split(".")))
-        log_queue.put(f"MainProcess: Local version: {VERSION}, Remote version: {remote_version}")
+        log_queue.put(f"MainProcess: Local version: {VERSION} ({local_ver_tuple}), Remote version: {remote_version} ({remote_ver_tuple})")
         if remote_ver_tuple > local_ver_tuple:
-            # Prompt user
             log_queue.put("MainProcess: Newer version detected, prompting user")
             if messagebox.askyesno("Update Available",
                                    f"A new version ({remote_version}) is available!\n"
                                    f"Current version: {VERSION}\n"
                                    "Download and update now?"):
                 log_queue.put("MainProcess: User chose to update")
-                # Download and overwrite
                 script_path = sys.argv[0]
                 log_queue.put(f"MainProcess: Updating file at {script_path}")
                 with open(script_path, "w", encoding="utf-8") as f:
                     f.write(remote_content)
-                    f.flush()  # Ensure write completes
+                    f.flush()
                 log_queue.put("MainProcess: New version downloaded")
-                # Small delay to ensure file system sync
                 time.sleep(0.5)
-                # Relaunch
                 log_queue.put("MainProcess: Relaunching with new version")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
-                sys.exit(0)  # Shouldn’t reach here, but safety net
+                sys.exit(0)
             else:
                 log_queue.put("MainProcess: User declined update")
         else:
-            log_queue.put("MainProcess: No update needed")
+            log_queue.put("MainProcess: No update needed (remote <= local)")
     except requests.RequestException as e:
         log_queue.put(f"MainProcess: Failed to check for updates: {str(e)}")
     except Exception as e:
@@ -112,7 +109,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         options = Options()
         if USE_DEFAULT_PROFILE:
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
-            profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
+            profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path_join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} no default-release profile found, using temporary profile")
                 firefox_profile = FirefoxProfile()
@@ -191,7 +188,7 @@ class RWKMultiClient:
         self.master.protocol("WM_DELETE_WINDOW", self.close_application)
         self.master.grid_rowconfigure(2, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-        check_for_updates(self.log_queue)  # Check immediately on startup
+        check_for_updates(self.log_queue)
         self.update_gui()
 
     def create_widgets(self):
