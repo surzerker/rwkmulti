@@ -18,7 +18,7 @@ DEFAULT_IGNORE_KEYS = {
 }
 
 # Current version of this script
-VERSION = "1.0.0"
+VERSION = "1.4.2"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
