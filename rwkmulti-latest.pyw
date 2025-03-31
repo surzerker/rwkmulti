@@ -17,7 +17,7 @@ import requests
 import sys
 
 # Current version of this script
-VERSION = "4.9.1"
+VERSION = "1.1.0"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
 USE_DEFAULT_PROFILE = 0
@@ -25,40 +25,53 @@ USE_DEFAULT_PROFILE = 0
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 
-def check_for_updates():
+def check_for_updates(log_queue):
+    log_queue.put("MainProcess: Checking for updates...")
     try:
         # Fetch the remote file content
         response = requests.get(GITHUB_URL, timeout=5)
         response.raise_for_status()
         remote_content = response.text
+        log_queue.put("MainProcess: Successfully fetched remote file")
 
-        # Extract version from remote file (assuming it's near the top)
-        for line in remote_content.splitlines()[:30]:  # Check first 10 lines
+        # Extract version from remote file (scan all lines)
+        remote_version = None
+        for line in remote_content.splitlines():
             if line.strip().startswith('VERSION = "'):
                 remote_version = line.strip().split('"')[1]
+                log_queue.put(f"MainProcess: Found remote version: {remote_version}")
                 break
-        else:
-            return  # No version found, skip update
+        if not remote_version:
+            log_queue.put("MainProcess: No VERSION found in remote file")
+            return
 
         # Compare versions
         local_ver_tuple = tuple(map(int, VERSION.split(".")))
         remote_ver_tuple = tuple(map(int, remote_version.split(".")))
+        log_queue.put(f"MainProcess: Local version: {VERSION}, Remote version: {remote_version}")
         if remote_ver_tuple > local_ver_tuple:
             # Prompt user
+            log_queue.put("MainProcess: Newer version detected, prompting user")
             if messagebox.askyesno("Update Available",
                                    f"A new version ({remote_version}) is available!\n"
                                    f"Current version: {VERSION}\n"
                                    "Download and update now?"):
+                log_queue.put("MainProcess: User chose to update")
                 # Download and overwrite
                 with open(sys.argv[0], "w", encoding="utf-8") as f:
                     f.write(remote_content)
+                log_queue.put("MainProcess: New version downloaded")
                 # Relaunch
                 os.execv(sys.executable, [sys.executable] + sys.argv)
                 sys.exit(0)  # Ensure exit after relaunch
+            else:
+                log_queue.put("MainProcess: User declined update")
+        else:
+            log_queue.put("MainProcess: No update needed")
     except requests.RequestException as e:
-        print(f"Failed to check for updates: {e}")
+        log_queue.put(f"MainProcess: Failed to check for updates: {str(e)}")
     except Exception as e:
-        print(f"Update error: {e}")
+        log_queue.put(f"MainProcess: Update error: {str(e)}")
 
 def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue):
     pressed_keys = {}
@@ -172,7 +185,7 @@ class RWKMultiClient:
         self.master.protocol("WM_DELETE_WINDOW", self.close_application)
         self.master.grid_rowconfigure(2, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-        check_for_updates()  # Check for updates on startup
+        check_for_updates(self.log_queue)  # Check immediately on startup
         self.update_gui()
 
     def create_widgets(self):
