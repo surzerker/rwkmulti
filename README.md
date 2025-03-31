@@ -20,7 +20,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 3. **Load default Firefox profile:**  
    - By default, the script can now load your main Firefox profile instead of creating a temporary profile. This lets you use saved credentials, cookies, and other profile-specific data.
    - Thanks to Cagedangel for this feature suggestion!
-4. **New naming convention:** The script is now named `rwkmulti-latest.pyw` to prepare for the upcoming auto-update feature.
+4. **New naming convention:** The script is now named `rwkmulti-latest.pyw` to accomodate the new auto-update feature.
 5. **Auto-update support:**  
    - At startup, the script checks if a newer version is available and offers to download it if you’re out-of-date.
    - Prevents overwriting of user-specific config files during the update process.
