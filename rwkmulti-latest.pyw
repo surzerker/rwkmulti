@@ -33,7 +33,7 @@ def check_for_updates():
         remote_content = response.text
 
         # Extract version from remote file (assuming it's near the top)
-        for line in remote_content.splitlines()[:10]:  # Check first 10 lines
+        for line in remote_content.splitlines()[:30]:  # Check first 10 lines
             if line.strip().startswith('VERSION = "'):
                 remote_version = line.strip().split('"')[1]
                 break
