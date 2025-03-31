@@ -9,7 +9,7 @@ This software is provided "as is," without warranty of any kind, express or impl
 ## Important Notes
 
 - **We now use `rwkmulti-latest.pyw` as the main script.**
-- **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this issue.
+- **Use the latest version of Firefox:** A bug in older Firefox versions causes pages to scroll when keys are sent. Updating Firefox resolves this.
 - **Windows 11 Users:** You typically do **not** need to install GeckoDriver separately, as Selenium integrates directly with Firefox.
 
 ## What's New
