@@ -9,7 +9,7 @@ import configparser
 import json
 
 # Default settings (used if no config file exists)
-DEFAULT_SERVER_URL = "https://rwk2.racewarkingdoms.com/"
+DEFAULT_SERVER_URL = "https://r2p3.racewarkingdoms.com/"
 DEFAULT_USE_DEFAULT_PROFILE = 0
 DEFAULT_NUM_GAME_WINDOWS = 12
 DEFAULT_IGNORE_KEYS = {
@@ -18,7 +18,7 @@ DEFAULT_IGNORE_KEYS = {
 }
 
 # Current version of this script
-VERSION = "1.3.1"
+VERSION = "1.3.2"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -169,7 +169,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
-        if USE_DEFAULT_PROFILE:  # Note: This uses the instance variable, but we'll update it dynamically
+        if USE_DEFAULT_PROFILE:  # This will use the instance variable, updated dynamically
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
@@ -232,7 +232,7 @@ class ConfigWindow:
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
         self.top.geometry("400x400")
-        self.app = app  # Reference to main app to update settings
+        self.app = app
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
@@ -248,11 +248,30 @@ class ConfigWindow:
         Entry(self.top, textvariable=self.num_game_windows, width=10).pack()
         
         Label(self.top, text="Key Ignore Settings (JSON, e.g., {\"Pattern\": [\"key1\", \"key2\"]})").pack(pady=5)
-        self.ignore_text = Text(self.top, height=15, width=40)
+        self.ignore_text = Text(self.top, height=15, width=40, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
         self.ignore_text.pack()
-        
-        Button(self.top, text="Save", command=self.save).pack(pady=10)
+
+        # Right-click context menu
+        self.context_menu = Menu(self.top, tearoff=0)
+        self.context_menu.add_command(label="Cut", command=self.cut)
+        self.context_menu.add_command(label="Copy", command=self.copy)
+        self.context_menu.add_command(label="Paste", command=self.paste)
+        self.ignore_text.bind("<Button-3>", self.show_context_menu)
+
+        Button(self.top, text="Save and Close", command=self.save).pack(pady=10)
+
+    def show_context_menu(self, event):
+        self.context_menu.post(event.x_root, event.y_root)
+
+    def cut(self):
+        self.ignore_text.event_generate("<<Cut>>")
+
+    def copy(self):
+        self.ignore_text.event_generate("<<Copy>>")
+
+    def paste(self):
+        self.ignore_text.event_generate("<<Paste>>")
 
     def save(self):
         try:
@@ -260,9 +279,7 @@ class ConfigWindow:
             new_num_windows = int(self.num_game_windows.get())
             if new_num_windows <= 0:
                 raise ValueError("Number of windows must be positive")
-            # Save to file
             save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys)
-            # Update running app instance
             self.app.server_url = self.server_url.get()
             self.app.use_default_profile = self.use_default_profile.get()
             self.app.num_game_windows = new_num_windows
@@ -284,7 +301,6 @@ class RWKMultiClient:
         self.is_running = False
         self.is_paused = True
         
-        # Load settings from config
         self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys = load_config()
         
         self.log_queue = mp.Queue()
