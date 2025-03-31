@@ -9,13 +9,16 @@ import configparser
 import json
 
 # Default settings (used if no config file exists)
-DEFAULT_SERVER_URL = "https://r2p3.racewarkingdoms.com/"
+DEFAULT_SERVER_URL = "https://rwk2.racewarkingdoms.com/"
 DEFAULT_USE_DEFAULT_PROFILE = 0
 DEFAULT_NUM_GAME_WINDOWS = 12
-DEFAULT_IGNORE_KEYS = {}
+DEFAULT_IGNORE_KEYS = {
+    "Surzerker": ["c"],
+    "Spongebob": ["a"]
+}
 
 # Current version of this script
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -67,7 +70,6 @@ def load_config():
         use_default_profile = DEFAULT_USE_DEFAULT_PROFILE
         num_game_windows = DEFAULT_NUM_GAME_WINDOWS
         ignore_keys = DEFAULT_IGNORE_KEYS
-        # Save defaults with comments
         save_config(server_url, use_default_profile, num_game_windows, ignore_keys)
     return server_url, use_default_profile, num_game_windows, ignore_keys
 
@@ -167,7 +169,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
-        if USE_DEFAULT_PROFILE:
+        if USE_DEFAULT_PROFILE:  # Note: This uses the instance variable, but we'll update it dynamically
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
@@ -226,10 +228,11 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
 
 class ConfigWindow:
-    def __init__(self, parent, server_url, use_default_profile, num_game_windows, ignore_keys):
+    def __init__(self, parent, server_url, use_default_profile, num_game_windows, ignore_keys, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
         self.top.geometry("400x400")
+        self.app = app  # Reference to main app to update settings
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
@@ -257,7 +260,16 @@ class ConfigWindow:
             new_num_windows = int(self.num_game_windows.get())
             if new_num_windows <= 0:
                 raise ValueError("Number of windows must be positive")
+            # Save to file
             save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys)
+            # Update running app instance
+            self.app.server_url = self.server_url.get()
+            self.app.use_default_profile = self.use_default_profile.get()
+            self.app.num_game_windows = new_num_windows
+            self.app.ignore_keys = new_ignore_keys
+            self.app.num_window_entry.delete(0, END)
+            self.app.num_window_entry.insert(END, str(new_num_windows))
+            self.app.log_queue.put("MainProcess: Configuration updated successfully")
             self.top.destroy()
         except json.JSONDecodeError:
             messagebox.showerror("Error", "Invalid JSON format for ignore keys")
@@ -310,7 +322,7 @@ class RWKMultiClient:
         self.output_text['yscrollcommand'] = self.scrollbar.set
 
     def open_config(self):
-        ConfigWindow(self.master, self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys)
+        ConfigWindow(self.master, self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self)
 
     def copy_logs(self):
         self.master.clipboard_clear()
