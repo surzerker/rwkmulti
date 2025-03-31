@@ -5,15 +5,23 @@ import os
 import time
 import queue
 import multiprocessing as mp
+import configparser
+import json
+
+# Default settings (used if no config file exists)
+DEFAULT_SERVER_URL = "https://r2p3.racewarkingdoms.com/"
+DEFAULT_USE_DEFAULT_PROFILE = 0
+DEFAULT_NUM_GAME_WINDOWS = 12
+DEFAULT_IGNORE_KEYS = {}
 
 # Current version of this script
-VERSION = "1.2.0"
-
-# Toggle to use the default Firefox profile (1 = yes, 0 = no)
-USE_DEFAULT_PROFILE = 0
+VERSION = "1.3.0"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
+
+# Config file path
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
 # Check for required libraries
 missing_libs = []
@@ -45,6 +53,39 @@ if missing_libs:
     error_msg += "\n\nAfter installing, restart the script."
     messagebox.showerror("Missing Dependencies", error_msg)
     sys.exit(1)
+
+def load_config():
+    config = configparser.ConfigParser()
+    if os.path.exists(CONFIG_FILE):
+        config.read(CONFIG_FILE)
+        server_url = config.get("Settings", "server_url", fallback=DEFAULT_SERVER_URL)
+        use_default_profile = config.getint("Settings", "use_default_profile", fallback=DEFAULT_USE_DEFAULT_PROFILE)
+        num_game_windows = config.getint("Settings", "num_game_windows", fallback=DEFAULT_NUM_GAME_WINDOWS)
+        ignore_keys = json.loads(config.get("Settings", "ignore_keys", fallback=json.dumps(DEFAULT_IGNORE_KEYS)))
+    else:
+        server_url = DEFAULT_SERVER_URL
+        use_default_profile = DEFAULT_USE_DEFAULT_PROFILE
+        num_game_windows = DEFAULT_NUM_GAME_WINDOWS
+        ignore_keys = DEFAULT_IGNORE_KEYS
+        # Save defaults with comments
+        save_config(server_url, use_default_profile, num_game_windows, ignore_keys)
+    return server_url, use_default_profile, num_game_windows, ignore_keys
+
+def save_config(server_url, use_default_profile, num_game_windows, ignore_keys):
+    config = configparser.ConfigParser()
+    config.optionxform = str  # Preserve case in keys
+    config["Settings"] = {
+        "# Server URL to connect to": "",
+        "server_url": server_url,
+        "# Use default Firefox profile (0 = no, 1 = yes)": "",
+        "use_default_profile": str(use_default_profile),
+        "# Number of game windows to open": "",
+        "num_game_windows": str(num_game_windows),
+        "# Ignore keys by window title pattern (JSON format, e.g., {\"Pattern\": [\"key1\", \"key2\"]})": "",
+        "ignore_keys": json.dumps(ignore_keys)
+    }
+    with open(CONFIG_FILE, "w") as f:
+        config.write(f)
 
 def check_for_updates(log_queue):
     log_queue.put("MainProcess: Checking for updates...")
@@ -118,7 +159,7 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
                     del pressed_keys[input_key.lower()]
     log_queue.put("Process-1: Keyboard process exiting")
 
-def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue):
+def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url):
     special_keys_map = {
         'up': Keys.ARROW_UP, 'down': Keys.ARROW_DOWN,
         'left': Keys.ARROW_LEFT, 'right': Keys.ARROW_RIGHT,
@@ -145,8 +186,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox failed: {str(e)}")
         return
 
-    url = "https://r2p3.racewarkingdoms.com/"
-    driver.get(url)
+    driver.get(server_url)
     wait = WebDriverWait(driver, 10)
     
     body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
@@ -185,20 +225,55 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     driver.quit()
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
 
+class ConfigWindow:
+    def __init__(self, parent, server_url, use_default_profile, num_game_windows, ignore_keys):
+        self.top = Toplevel(parent)
+        self.top.title("RWK Multi Config")
+        self.top.geometry("400x400")
+        
+        self.server_url = StringVar(value=server_url)
+        self.use_default_profile = IntVar(value=use_default_profile)
+        self.num_game_windows = StringVar(value=str(num_game_windows))
+        self.ignore_keys = ignore_keys.copy()
+        
+        Label(self.top, text="Server URL:").pack(pady=5)
+        Entry(self.top, textvariable=self.server_url, width=40).pack()
+        
+        Checkbutton(self.top, text="Use Default Firefox Profile", variable=self.use_default_profile).pack(pady=5)
+        
+        Label(self.top, text="Number of Game Windows:").pack(pady=5)
+        Entry(self.top, textvariable=self.num_game_windows, width=10).pack()
+        
+        Label(self.top, text="Key Ignore Settings (JSON, e.g., {\"Pattern\": [\"key1\", \"key2\"]})").pack(pady=5)
+        self.ignore_text = Text(self.top, height=15, width=40)
+        self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
+        self.ignore_text.pack()
+        
+        Button(self.top, text="Save", command=self.save).pack(pady=10)
+
+    def save(self):
+        try:
+            new_ignore_keys = json.loads(self.ignore_text.get("1.0", END).strip())
+            new_num_windows = int(self.num_game_windows.get())
+            if new_num_windows <= 0:
+                raise ValueError("Number of windows must be positive")
+            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys)
+            self.top.destroy()
+        except json.JSONDecodeError:
+            messagebox.showerror("Error", "Invalid JSON format for ignore keys")
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
 class RWKMultiClient:
     def __init__(self, master):
         self.master = master
         master.title("RWK Multibox Client")
         
-        self.num_game_windows = 12
         self.is_running = False
         self.is_paused = True
-        self.ignore_keys = {
-            "Surzerker": ["c"],
-            "Cid": ["c"],
-            "Spongebob": ["a"],
-            "Buu": ["a"]
-        }
+        
+        # Load settings from config
+        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys = load_config()
         
         self.log_queue = mp.Queue()
         self.processes = []
@@ -224,12 +299,18 @@ class RWKMultiClient:
         self.copy_logs_button = Button(self.master, text="Copy Logs", command=self.copy_logs)
         self.copy_logs_button.grid(row=1, column=1)
 
+        self.config_button = Button(self.master, text="Config", command=self.open_config)
+        self.config_button.grid(row=1, column=2)
+
         self.output_text = Text(self.master, width=50, wrap=WORD, bg="black", fg="white")
-        self.output_text.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        self.output_text.grid(row=2, column=0, columnspan=3, sticky="nsew")
 
         self.scrollbar = Scrollbar(self.master, command=self.output_text.yview)
-        self.scrollbar.grid(row=2, column=2, sticky='nsew')
+        self.scrollbar.grid(row=2, column=3, sticky='nsew')
         self.output_text['yscrollcommand'] = self.scrollbar.set
+
+    def open_config(self):
+        ConfigWindow(self.master, self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys)
 
     def copy_logs(self):
         self.master.clipboard_clear()
@@ -268,7 +349,7 @@ class RWKMultiClient:
         self.processes.append(keyboard_process)
         
         for i in range(self.num_game_windows):
-            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue))
+            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url))
             p.daemon = True
             p.start()
             self.processes.append(p)
