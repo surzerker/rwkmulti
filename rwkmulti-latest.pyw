@@ -1,23 +1,13 @@
 from tkinter import *
 from tkinter import messagebox
-import selenium.webdriver as webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-import multiprocessing as mp
-import keyboard
-import queue
-import time
-import os
-import requests
 import sys
+import os
+import time
+import queue
+import multiprocessing as mp
 
 # Current version of this script
-VERSION = "1.1.1"
+VERSION = "1.2.0"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
 USE_DEFAULT_PROFILE = 0
@@ -25,17 +15,47 @@ USE_DEFAULT_PROFILE = 0
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 
+# Check for required libraries
+missing_libs = []
+try:
+    import requests
+except ImportError:
+    missing_libs.append("requests")
+try:
+    import selenium.webdriver as webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.common.action_chains import ActionChains
+    from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+except ImportError:
+    missing_libs.append("selenium")
+try:
+    import keyboard
+except ImportError:
+    missing_libs.append("keyboard")
+
+if missing_libs:
+    error_msg = "The following required libraries are missing:\n\n"
+    error_msg += "\n".join(f"- {lib}" for lib in missing_libs)
+    error_msg += "\n\nPlease install them by running these commands in your terminal:\n"
+    error_msg += "\n".join(f"pip3 install {lib}" for lib in missing_libs)
+    error_msg += "\n\nAfter installing, restart the script."
+    messagebox.showerror("Missing Dependencies", error_msg)
+    sys.exit(1)
+
 def check_for_updates(log_queue):
     log_queue.put("MainProcess: Checking for updates...")
     try:
-        # Fetch the remote file content, no cache
-        headers = {"Cache-Control": "no-cache", "Pragma": "no-cache"}
-        response = requests.get(GITHUB_URL, headers=headers, timeout=5)
+        timestamp = str(time.time())
+        url_with_timestamp = f"{GITHUB_URL}?t={timestamp}"
+        response = requests.get(url_with_timestamp, timeout=5)
         response.raise_for_status()
         remote_content = response.text
         log_queue.put("MainProcess: Successfully fetched remote file")
 
-        # Extract version from remote file (scan all lines)
         remote_version = None
         for line in remote_content.splitlines():
             if line.strip().startswith('VERSION = "'):
@@ -46,10 +66,9 @@ def check_for_updates(log_queue):
             log_queue.put("MainProcess: No VERSION found in remote file")
             return
 
-        # Compare versions
         local_ver_tuple = tuple(map(int, VERSION.split(".")))
         remote_ver_tuple = tuple(map(int, remote_version.split(".")))
-        log_queue.put(f"MainProcess: Local version: {VERSION} ({local_ver_tuple}), Remote version: {remote_version} ({remote_ver_tuple})")
+        log_queue.put(f"MainProcess: Local version: {VERSION}, Remote version: {remote_version}")
         if remote_ver_tuple > local_ver_tuple:
             log_queue.put("MainProcess: Newer version detected, prompting user")
             if messagebox.askyesno("Update Available",
@@ -109,7 +128,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         options = Options()
         if USE_DEFAULT_PROFILE:
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
-            profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path_join(profile_path, d)) and 'default-release' in d]
+            profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} no default-release profile found, using temporary profile")
                 firefox_profile = FirefoxProfile()
