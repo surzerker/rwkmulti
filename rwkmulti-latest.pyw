@@ -18,7 +18,7 @@ DEFAULT_IGNORE_KEYS = {
 }
 
 # Current version of this script
-VERSION = "1.3.2"
+VERSION = "1.4.1"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -169,7 +169,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
-        if USE_DEFAULT_PROFILE:  # This will use the instance variable, updated dynamically
+        if USE_DEFAULT_PROFILE:  # Uses instance variable, updated dynamically
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
@@ -228,11 +228,14 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
 
 class ConfigWindow:
-    def __init__(self, parent, server_url, use_default_profile, num_game_windows, ignore_keys, app):
+    def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x400")
+        self.top.geometry("400x500")  # Increased height to fit all elements
         self.app = app
+        
+        # Load fresh config from file
+        server_url, use_default_profile, num_game_windows, ignore_keys = load_config()
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
@@ -338,7 +341,7 @@ class RWKMultiClient:
         self.output_text['yscrollcommand'] = self.scrollbar.set
 
     def open_config(self):
-        ConfigWindow(self.master, self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self)
+        ConfigWindow(self.master, self)
 
     def copy_logs(self):
         self.master.clipboard_clear()
