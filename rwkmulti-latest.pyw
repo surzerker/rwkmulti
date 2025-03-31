@@ -1,5 +1,6 @@
 from tkinter import *
-from selenium import webdriver
+from tkinter import messagebox
+import selenium.webdriver as webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -12,9 +13,52 @@ import keyboard
 import queue
 import time
 import os
+import requests
+import sys
+
+# Current version of this script
+VERSION = "4.9.0"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
-USE_DEFAULT_PROFILE = 1
+USE_DEFAULT_PROFILE = 0
+
+# GitHub raw URL for the latest version
+GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
+
+def check_for_updates():
+    try:
+        # Fetch the remote file content
+        response = requests.get(GITHUB_URL, timeout=5)
+        response.raise_for_status()
+        remote_content = response.text
+
+        # Extract version from remote file (assuming it's near the top)
+        for line in remote_content.splitlines()[:10]:  # Check first 10 lines
+            if line.strip().startswith('VERSION = "'):
+                remote_version = line.strip().split('"')[1]
+                break
+        else:
+            return  # No version found, skip update
+
+        # Compare versions
+        local_ver_tuple = tuple(map(int, VERSION.split(".")))
+        remote_ver_tuple = tuple(map(int, remote_version.split(".")))
+        if remote_ver_tuple > local_ver_tuple:
+            # Prompt user
+            if messagebox.askyesno("Update Available",
+                                   f"A new version ({remote_version}) is available!\n"
+                                   f"Current version: {VERSION}\n"
+                                   "Download and update now?"):
+                # Download and overwrite
+                with open(sys.argv[0], "w", encoding="utf-8") as f:
+                    f.write(remote_content)
+                # Relaunch
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+                sys.exit(0)  # Ensure exit after relaunch
+    except requests.RequestException as e:
+        print(f"Failed to check for updates: {e}")
+    except Exception as e:
+        print(f"Update error: {e}")
 
 def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue):
     pressed_keys = {}
@@ -56,7 +100,6 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
             else:
                 default_profile = os.path.join(profile_path, profile_dirs[0])
                 firefox_profile = FirefoxProfile(default_profile)
-                # Ensure autofill is enabled
                 firefox_profile.set_preference("signon.autofillForms", True)
                 firefox_profile.set_preference("signon.rememberSignons", True)
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile}")
@@ -129,6 +172,7 @@ class RWKMultiClient:
         self.master.protocol("WM_DELETE_WINDOW", self.close_application)
         self.master.grid_rowconfigure(2, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
+        check_for_updates()  # Check for updates on startup
         self.update_gui()
 
     def create_widgets(self):
