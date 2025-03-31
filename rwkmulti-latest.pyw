@@ -17,7 +17,7 @@ import requests
 import sys
 
 # Current version of this script
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
 USE_DEFAULT_PROFILE = 0
@@ -58,12 +58,18 @@ def check_for_updates(log_queue):
                                    "Download and update now?"):
                 log_queue.put("MainProcess: User chose to update")
                 # Download and overwrite
-                with open(sys.argv[0], "w", encoding="utf-8") as f:
+                script_path = sys.argv[0]
+                log_queue.put(f"MainProcess: Updating file at {script_path}")
+                with open(script_path, "w", encoding="utf-8") as f:
                     f.write(remote_content)
+                    f.flush()  # Ensure write completes
                 log_queue.put("MainProcess: New version downloaded")
+                # Small delay to ensure file system sync
+                time.sleep(0.5)
                 # Relaunch
+                log_queue.put("MainProcess: Relaunching with new version")
                 os.execv(sys.executable, [sys.executable] + sys.argv)
-                sys.exit(0)  # Ensure exit after relaunch
+                sys.exit(0)  # Shouldn’t reach here, but safety net
             else:
                 log_queue.put("MainProcess: User declined update")
         else:
