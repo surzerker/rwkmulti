@@ -18,7 +18,7 @@ DEFAULT_IGNORE_KEYS = {
 }
 
 # Current version of this script
-VERSION = "1.4.1"
+VERSION = "1.0.0"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -161,7 +161,7 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
                     del pressed_keys[input_key.lower()]
     log_queue.put("Process-1: Keyboard process exiting")
 
-def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url):
+def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile):
     special_keys_map = {
         'up': Keys.ARROW_UP, 'down': Keys.ARROW_DOWN,
         'left': Keys.ARROW_LEFT, 'right': Keys.ARROW_RIGHT,
@@ -169,7 +169,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
-        if USE_DEFAULT_PROFILE:  # Uses instance variable, updated dynamically
+        if use_default_profile:  # Use the passed parameter
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
@@ -231,7 +231,7 @@ class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x500")  # Increased height to fit all elements
+        self.top.geometry("400x500")
         self.app = app
         
         # Load fresh config from file
@@ -380,7 +380,7 @@ class RWKMultiClient:
         self.processes.append(keyboard_process)
         
         for i in range(self.num_game_windows):
-            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url))
+            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile))
             p.daemon = True
             p.start()
             self.processes.append(p)
