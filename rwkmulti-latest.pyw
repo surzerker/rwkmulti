@@ -17,7 +17,7 @@ import requests
 import sys
 
 # Current version of this script
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 
 # Toggle to use the default Firefox profile (1 = yes, 0 = no)
 USE_DEFAULT_PROFILE = 0
