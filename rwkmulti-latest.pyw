@@ -24,7 +24,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 }
 
 # Current version
-VERSION = "1.4.6"
+VERSION = "1.4.7"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -221,18 +221,33 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     if auto_arrange and str(window_id) in window_layouts:
         try:
             monitors = screeninfo.get_monitors()
-            layout = window_layouts[str(window_id)]
+            layout = window_layouts[str(window_id)]  # [monitor, rows, cols, position]
             monitor_idx = min(layout[0] - 1, len(monitors) - 1)
             rows, cols, position = layout[1], layout[2], layout[3]
             monitor = monitors[monitor_idx]
             window_width = monitor.width // cols
             window_height = monitor.height // rows
-            col = (position - 1) % cols
-            row = (position - 1) // cols
+            col = (position - 1) % cols  # 0-based column
+            row = (position - 1) // cols  # 0-based row
+
+            # Initial position
             x = monitor.x + col * window_width
             y = monitor.y + row * window_height
-            driver.set_window_position(x, y)
             driver.set_window_size(window_width, window_height)
+            driver.set_window_position(x, y)
+
+            # Adjust for borders to eliminate gaps
+            rect = driver.get_window_rect()
+            actual_width = rect['width']
+            actual_height = rect['height']
+            border_width = actual_width - window_width
+            border_height = actual_height - window_height
+            if col > 0:
+                x -= border_width * col  # Shift left to overlap borders
+            if row > 0:
+                y -= border_height * row  # Shift up to overlap borders
+            driver.set_window_position(x, y)
+
             log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y})")
         except Exception as e:
             log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange failed: {str(e)}")
@@ -256,7 +271,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {remapped_key} to {window_title}")
                     except EC.StaleElementReferenceException:
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
-                        body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                        body = wait.until(EC.presence_of_element_located((By_TAG_NAME, 'body')))
                         ActionChains(driver).move_to_element(body).click().perform()
                         body.send_keys(selenium_key)
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {remapped_key} to {window_title} after refresh")
