@@ -95,6 +95,8 @@ use_default_profile = 0
 num_game_windows = 12
 # Ignore keys by window title pattern (JSON format, e.g., {"Pattern": ["key1", "key2"]})
 ignore_keys = {"Surzerker": ["c"], "Spongebob": ["a"]}
+# Key rebinding (JSON format, e.g., {"c": "s", "s": "c"}) = 
+key_rebindings = {"c": "s", "s": "c"}
 ```
 
 - **Server URL:** Set your preferred Race War Kingdoms server.
