@@ -25,7 +25,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 
 # Current version
 VERSION = "1.4.7"
-GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
+GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
 # Check libraries
