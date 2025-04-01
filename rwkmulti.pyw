@@ -297,7 +297,7 @@ class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x800")
+        self.top.geometry("400x840")
         self.app = app
         
         server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset = load_config()
