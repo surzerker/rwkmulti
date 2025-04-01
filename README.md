@@ -17,9 +17,12 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 
 ### Recent Updates & Fixes
 
-**Version 1.4.3**
-- **Key Rebinding** Added support for rebinding keys (1:1 only) in the Config. Note: ignore_key settings apply to the original key, so if you rebinded your "S" key to "C", you would want to ingore "S" for a fighter.
-**Version 1.4.2**
+**[Version 1.4.3]**
+- **Key Rebinding:** Added support for rebinding keys (1:1 only) in the Config.  
+  *Note:* `ignore_key` settings apply to the original key.  
+  Example: if you rebind your "S" key to "C", you should ignore "S" for a fighter.
+
+**[Version 1.4.2]**
 - **Fixed Key-Sending Glitches:** No more missed keystrokes across windows.
 - **Improved Key Queue:** Limits the queue to the last two pressed keys, preventing lag from rapid inputs.
 - **Default Firefox Profile:** Optionally loads your main Firefox profile (with saved logins/cookies) instead of a temporary one. *(Thanks, Cagedangel!)*
@@ -27,6 +30,7 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 - **Auto-Update Feature:** Checks for updates on startup and prompts to download if a newer version exists, preserving your config during updates.
 - **Config Button & File:** A **Config** button opens an editor for `rwkmulti_settings.cfg`, storing your server URL, profile setting, and key ignore preferences.
 - **Better Error Handling:** Popups guide you to install missing libraries (e.g., Selenium) if needed.
+
 
 ## Prerequisites
 
