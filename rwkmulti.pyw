@@ -27,7 +27,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
 DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
-# Current version (checksum test text: BLAH)
+# Current version
 VERSION = "1.5.7"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
