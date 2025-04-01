@@ -26,7 +26,7 @@ DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
 DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
 # Current version
-VERSION = "1.5.4"
+VERSION = "1.5.5"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -306,7 +306,7 @@ class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("600x500")
+        self.top.geometry("700x500")
         self.app = app
         
         server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset_horizontal, window_border_offset_vertical = load_config()
@@ -335,24 +335,24 @@ class ConfigWindow:
         Label(self.top, text="Horizontal Offset (px):").grid(row=4, column=0, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.window_border_offset_horizontal, width=10).grid(row=4, column=1, sticky="w", padx=5, pady=5)
         
-        # Right column (col 2-3)
-        Label(self.top, text="Key Ignore Settings (JSON):").grid(row=0, column=2, sticky="e", padx=5, pady=5)
-        self.ignore_text = Text(self.top, height=5, width=30, wrap=WORD)
+        # Right column (col 2-3) with line break
+        Label(self.top, text="Key Ignore Settings (JSON):").grid(row=1, column=2, sticky="e", padx=5, pady=5)
+        self.ignore_text = Text(self.top, height=5, width=35, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
-        self.ignore_text.grid(row=0, column=3, sticky="w", padx=5, pady=5)
+        self.ignore_text.grid(row=1, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Key Rebindings (JSON):").grid(row=1, column=2, sticky="e", padx=5, pady=5)
-        self.rebind_text = Text(self.top, height=5, width=30, wrap=WORD)
+        Label(self.top, text="Key Rebindings (JSON):").grid(row=2, column=2, sticky="e", padx=5, pady=5)
+        self.rebind_text = Text(self.top, height=5, width=35, wrap=WORD)
         self.rebind_text.insert(END, json.dumps(self.key_rebindings, indent=2))
-        self.rebind_text.grid(row=1, column=3, sticky="w", padx=5, pady=5)
+        self.rebind_text.grid(row=2, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Window Layouts (JSON):").grid(row=2, column=2, sticky="e", padx=5, pady=5)
-        self.layout_text = Text(self.top, height=5, width=30, wrap=WORD)
+        Label(self.top, text="Window Layouts (JSON):").grid(row=3, column=2, sticky="e", padx=5, pady=5)
+        self.layout_text = Text(self.top, height=5, width=35, wrap=WORD)
         self.layout_text.insert(END, json.dumps(self.window_layouts, indent=2))
-        self.layout_text.grid(row=2, column=3, sticky="w", padx=5, pady=5)
+        self.layout_text.grid(row=3, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Vertical Offset (px):").grid(row=3, column=2, sticky="e", padx=5, pady=5)
-        Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).grid(row=3, column=3, sticky="w", padx=5, pady=5)
+        Label(self.top, text="Vertical Offset (px):").grid(row=4, column=2, sticky="e", padx=5, pady=5)
+        Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).grid(row=4, column=3, sticky="w", padx=5, pady=5)
 
         # Save button across bottom
         Button(self.top, text="Save and Close", command=self.save).grid(row=5, column=0, columnspan=4, pady=10)
