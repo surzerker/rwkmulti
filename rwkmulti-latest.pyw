@@ -8,26 +8,26 @@ import multiprocessing as mp
 import configparser
 import json
 
-# Default settings (used if no config file exists)
+# Default settings
 DEFAULT_SERVER_URL = "https://rwk2.racewarkingdoms.com/"
 DEFAULT_USE_DEFAULT_PROFILE = 0
 DEFAULT_NUM_GAME_WINDOWS = 4
-DEFAULT_IGNORE_KEYS = {
-    "Surzerker": ["c"],
-    "Spongebob": ["a"]
-}
+DEFAULT_IGNORE_KEYS = {"Surzerker": ["c"], "Spongebob": ["a"]}
 DEFAULT_KEY_REBINDINGS = {}
+DEFAULT_AUTO_ARRANGE = 0  # Off by default
+DEFAULT_WINDOW_LAYOUTS = {
+    "0": [1, 2, 3, 1], "1": [1, 2, 3, 2], "2": [1, 2, 3, 3],  # Monitor 1, 2x3 grid
+    "3": [1, 2, 3, 4], "4": [1, 2, 3, 5], "5": [1, 2, 3, 6],
+    "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],  # Monitor 2, 2x3 grid
+    "9": [2, 2, 3, 4], "10": [2, 2, 3, 5], "11": [2, 2, 3, 6]
+}
 
-# Current version of this script
-VERSION = "1.4.4"
-
-# GitHub raw URL for the latest version
+# Current version
+VERSION = "1.4.5"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
-
-# Config file path
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
-# Check for required libraries
+# Check libraries
 missing_libs = []
 try:
     import requests
@@ -49,12 +49,15 @@ try:
 except ImportError:
     missing_libs.append("keyboard")
 
+try:
+    import screeninfo
+except ImportError:
+    missing_libs.append("screeninfo")
+
 if missing_libs:
-    error_msg = "The following required libraries are missing:\n\n"
-    error_msg += "\n".join(f"- {lib}" for lib in missing_libs)
-    error_msg += "\n\nPlease install them by running these commands in your terminal:\n"
-    error_msg += "\n".join(f"pip3 install {lib}" for lib in missing_libs)
-    error_msg += "\n\nAfter installing, restart the script."
+    error_msg = "Missing libraries:\n\n" + "\n".join(f"- {lib}" for lib in missing_libs) + \
+                "\n\nInstall with:\n" + "\n".join(f"pip3 install {lib}" for lib in missing_libs) + \
+                "\n\nThen restart."
     messagebox.showerror("Missing Dependencies", error_msg)
     sys.exit(1)
 
@@ -67,18 +70,22 @@ def load_config():
         num_game_windows = config.getint("Settings", "num_game_windows", fallback=DEFAULT_NUM_GAME_WINDOWS)
         ignore_keys = json.loads(config.get("Settings", "ignore_keys", fallback=json.dumps(DEFAULT_IGNORE_KEYS)))
         key_rebindings = json.loads(config.get("Settings", "key_rebindings", fallback=json.dumps(DEFAULT_KEY_REBINDINGS)))
+        auto_arrange = config.getint("Settings", "auto_arrange", fallback=DEFAULT_AUTO_ARRANGE)
+        window_layouts = json.loads(config.get("Settings", "window_layouts", fallback=json.dumps(DEFAULT_WINDOW_LAYOUTS)))
     else:
         server_url = DEFAULT_SERVER_URL
         use_default_profile = DEFAULT_USE_DEFAULT_PROFILE
         num_game_windows = DEFAULT_NUM_GAME_WINDOWS
         ignore_keys = DEFAULT_IGNORE_KEYS
         key_rebindings = DEFAULT_KEY_REBINDINGS
-        save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings)
-    return server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings
+        auto_arrange = DEFAULT_AUTO_ARRANGE
+        window_layouts = DEFAULT_WINDOW_LAYOUTS
+        save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts)
+    return server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts
 
-def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings):
+def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts):
     config = configparser.ConfigParser()
-    config.optionxform = str  # Preserve case in keys
+    config.optionxform = str
     config["Settings"] = {
         "# Server URL to connect to": "",
         "server_url": server_url,
@@ -89,7 +96,11 @@ def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, 
         "# Ignore keys by window title pattern (JSON format, e.g., {\"Pattern\": [\"key1\", \"key2\"]})": "",
         "ignore_keys": json.dumps(ignore_keys),
         "# Key rebinding (JSON format, e.g., {\"c\": \"s\", \"s\": \"c\"})": "",
-        "key_rebindings": json.dumps(key_rebindings)
+        "key_rebindings": json.dumps(key_rebindings),
+        "# Auto-arrange windows (0 = no, 1 = yes)": "",
+        "auto_arrange": str(auto_arrange),
+        "# Window layouts (JSON, e.g., {\"0\": [monitor, rows, cols, position], ...})": "",
+        "window_layouts": json.dumps(window_layouts)
     }
     with open(CONFIG_FILE, "w") as f:
         config.write(f)
@@ -99,17 +110,12 @@ def check_for_updates(log_queue):
     try:
         timestamp = str(time.time())
         url_with_timestamp = f"{GITHUB_URL}?t={timestamp}"
-        headers = {
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "If-Modified-Since": "0"  # Force server to check for updates
-        }
+        headers = {"Cache-Control": "no-cache", "Pragma": "no-cache", "If-Modified-Since": "0"}
         log_queue.put(f"MainProcess: Requesting {url_with_timestamp}")
         response = requests.get(url_with_timestamp, headers=headers, timeout=5)
         response.raise_for_status()
         remote_content = response.text
         log_queue.put("MainProcess: Successfully fetched remote file")
-
         remote_version = None
         for line in remote_content.splitlines():
             if line.strip().startswith('VERSION = "'):
@@ -119,7 +125,6 @@ def check_for_updates(log_queue):
         if not remote_version:
             log_queue.put("MainProcess: No VERSION found in remote file")
             return
-
         local_ver_tuple = tuple(map(int, VERSION.split(".")))
         remote_ver_tuple = tuple(map(int, remote_version.split(".")))
         log_queue.put(f"MainProcess: Local version: {VERSION}, Remote version: {remote_version}")
@@ -176,7 +181,7 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
                     del pressed_keys[original_key.lower()]
     log_queue.put("Process-1: Keyboard process exiting")
 
-def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile):
+def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile, auto_arrange, window_layouts):
     special_keys_map = {
         'up': Keys.ARROW_UP, 'down': Keys.ARROW_DOWN,
         'left': Keys.ARROW_LEFT, 'right': Keys.ARROW_RIGHT,
@@ -201,16 +206,34 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox launched")
     except Exception as e:
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox failed: {str(e)}")
-        return
+        return None
 
     driver.get(server_url)
     wait = WebDriverWait(driver, 10)
-    
     body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
-    driver.maximize_window()
-    
+
+    # Auto-arrange if enabled
+    if auto_arrange and str(window_id) in window_layouts:
+        try:
+            monitors = screeninfo.get_monitors()
+            layout = window_layouts[str(window_id)]  # [monitor, rows, cols, position]
+            monitor_idx = min(layout[0] - 1, len(monitors) - 1)  # 1-based monitor number
+            rows, cols, position = layout[1], layout[2], layout[3]
+            monitor = monitors[monitor_idx]
+            window_width = monitor.width // cols
+            window_height = monitor.height // rows
+            col = (position - 1) % cols  # 0-based column
+            row = (position - 1) // cols  # 0-based row
+            x = monitor.x + col * window_width
+            y = monitor.y + row * window_height
+            driver.set_window_position(x, y)
+            driver.set_window_size(window_width, window_height)
+            log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y})")
+        except Exception as e:
+            log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange failed: {str(e)}")
+
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process started")
     while is_running_flag.value:
         if not is_paused_flag.value:
@@ -241,22 +264,24 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         time.sleep(0.01)
     driver.quit()
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
+    return None
 
 class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x600")
+        self.top.geometry("400x700")
         self.app = app
         
-        # Load fresh config from file
-        server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings = load_config()
+        server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts = load_config()
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
         self.num_game_windows = StringVar(value=str(num_game_windows))
         self.ignore_keys = ignore_keys.copy()
         self.key_rebindings = key_rebindings.copy()
+        self.auto_arrange = IntVar(value=auto_arrange)
+        self.window_layouts = window_layouts.copy()
         
         Label(self.top, text="Server URL:").pack(pady=5)
         Entry(self.top, textvariable=self.server_url, width=40).pack()
@@ -276,13 +301,19 @@ class ConfigWindow:
         self.rebind_text.insert(END, json.dumps(self.key_rebindings, indent=2))
         self.rebind_text.pack()
 
-        # Right-click context menu for both text fields
+        Checkbutton(self.top, text="Auto-Arrange Windows", variable=self.auto_arrange).pack(pady=5)
+        
+        Label(self.top, text="Window Layouts (JSON, e.g., {\"0\": [monitor, rows, cols, pos], ...})").pack(pady=5)
+        self.layout_text = Text(self.top, height=10, width=40, wrap=WORD)
+        self.layout_text.insert(END, json.dumps(self.window_layouts, indent=2))
+        self.layout_text.pack()
+
         self.context_menu = Menu(self.top, tearoff=0)
         self.context_menu.add_command(label="Cut", command=self.cut)
         self.context_menu.add_command(label="Copy", command=self.copy)
         self.context_menu.add_command(label="Paste", command=self.paste)
-        self.ignore_text.bind("<Button-3>", self.show_context_menu)
-        self.rebind_text.bind("<Button-3>", self.show_context_menu)
+        for widget in [self.ignore_text, self.rebind_text, self.layout_text]:
+            widget.bind("<Button-3>", self.show_context_menu)
 
         Button(self.top, text="Save and Close", command=self.save).pack(pady=10)
 
@@ -290,39 +321,42 @@ class ConfigWindow:
         self.context_menu.post(event.x_root, event.y_root)
 
     def cut(self):
-        if self.top.focus_get() == self.ignore_text:
-            self.ignore_text.event_generate("<<Cut>>")
-        elif self.top.focus_get() == self.rebind_text:
-            self.rebind_text.event_generate("<<Cut>>")
+        focused = self.top.focus_get()
+        if focused in [self.ignore_text, self.rebind_text, self.layout_text]:
+            focused.event_generate("<<Cut>>")
 
     def copy(self):
-        if self.top.focus_get() == self.ignore_text:
-            self.ignore_text.event_generate("<<Copy>>")
-        elif self.top.focus_get() == self.rebind_text:
-            self.rebind_text.event_generate("<<Copy>>")
+        focused = self.top.focus_get()
+        if focused in [self.ignore_text, self.rebind_text, self.layout_text]:
+            focused.event_generate("<<Copy>>")
 
     def paste(self):
-        if self.top.focus_get() == self.ignore_text:
-            self.ignore_text.event_generate("<<Paste>>")
-        elif self.top.focus_get() == self.rebind_text:
-            self.rebind_text.event_generate("<<Paste>>")
+        focused = self.top.focus_get()
+        if focused in [self.ignore_text, self.rebind_text, self.layout_text]:
+            focused.event_generate("<<Paste>>")
 
     def save(self):
         try:
             new_ignore_keys = json.loads(self.ignore_text.get("1.0", END).strip())
             new_key_rebindings = json.loads(self.rebind_text.get("1.0", END).strip())
+            new_window_layouts = json.loads(self.layout_text.get("1.0", END).strip())
             new_num_windows = int(self.num_game_windows.get())
             if new_num_windows <= 0:
                 raise ValueError("Number of windows must be positive")
             for from_key, to_key in new_key_rebindings.items():
                 if not isinstance(from_key, str) or not isinstance(to_key, str) or len(from_key) != 1 or len(to_key) != 1:
                     raise ValueError("Key rebinding must map single keys (e.g., 'c' to 's')")
-            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys, new_key_rebindings)
+            for win_id, layout in new_window_layouts.items():
+                if not isinstance(win_id, str) or not isinstance(layout, list) or len(layout) != 4 or not all(isinstance(x, int) for x in layout) or layout[1] < 1 or layout[2] < 1 or layout[3] < 1:
+                    raise ValueError("Window layouts must map ID to [monitor, rows, cols, pos] (e.g., '0': [1, 2, 3, 1])")
+            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys, new_key_rebindings, self.auto_arrange.get(), new_window_layouts)
             self.app.server_url = self.server_url.get()
             self.app.use_default_profile = self.use_default_profile.get()
             self.app.num_game_windows = new_num_windows
             self.app.ignore_keys = new_ignore_keys
             self.app.key_rebindings = new_key_rebindings
+            self.app.auto_arrange = self.auto_arrange.get()
+            self.app.window_layouts = new_window_layouts
             self.app.num_window_entry.delete(0, END)
             self.app.num_window_entry.insert(END, str(new_num_windows))
             self.app.log_queue.put("MainProcess: Configuration updated successfully")
@@ -336,15 +370,11 @@ class RWKMultiClient:
     def __init__(self, master):
         self.master = master
         master.title("RWK Multibox Client")
-        
         self.is_running = False
         self.is_paused = True
-        
-        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self.key_rebindings = load_config()
-        
+        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self.key_rebindings, self.auto_arrange, self.window_layouts = load_config()
         self.log_queue = mp.Queue()
         self.processes = []
-        
         self.create_widgets()
         self.master.protocol("WM_DELETE_WINDOW", self.close_application)
         self.master.grid_rowconfigure(2, weight=1)
@@ -355,23 +385,17 @@ class RWKMultiClient:
     def create_widgets(self):
         self.num_window_label = Label(self.master, text="Number of Game Windows:")
         self.num_window_label.grid(row=0, column=0)
-
         self.num_window_entry = Entry(self.master)
         self.num_window_entry.insert(END, self.num_game_windows)
         self.num_window_entry.grid(row=0, column=1)
-
         self.start_stop_button = Button(self.master, text="Start", command=self.start_stop)
         self.start_stop_button.grid(row=1, column=0)
-
         self.copy_logs_button = Button(self.master, text="Copy Logs", command=self.copy_logs)
         self.copy_logs_button.grid(row=1, column=1)
-
         self.config_button = Button(self.master, text="Config", command=self.open_config)
         self.config_button.grid(row=1, column=2)
-
         self.output_text = Text(self.master, width=50, wrap=WORD, bg="black", fg="white")
         self.output_text.grid(row=2, column=0, columnspan=3, sticky="nsew")
-
         self.scrollbar = Scrollbar(self.master, command=self.output_text.yview)
         self.scrollbar.grid(row=2, column=3, sticky='nsew')
         self.output_text['yscrollcommand'] = self.scrollbar.set
@@ -400,23 +424,19 @@ class RWKMultiClient:
         except ValueError:
             self.log_queue.put("MainProcess: Please enter a valid number for game windows.\n")
             return
-
         self.log_queue.put("MainProcess: \nRWK Multibox Client started...\n"
                           "(Wait for all browser windows to open before taking any action.)\n\n")
         self.is_running = True
         self.update_start_stop_button_text()
-
         self.key_queues = [mp.Queue(maxsize=2) for _ in range(self.num_game_windows)]
         self.is_running_flag = mp.Value('b', True)
         self.is_paused_flag = mp.Value('b', True)
-        
         keyboard_process = mp.Process(target=monitor_keyboard_process, args=(self.key_queues, self.is_running_flag, self.is_paused_flag, self.log_queue, self.key_rebindings))
         keyboard_process.daemon = True
         keyboard_process.start()
         self.processes.append(keyboard_process)
-        
         for i in range(self.num_game_windows):
-            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile))
+            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile, self.auto_arrange, self.window_layouts))
             p.daemon = True
             p.start()
             self.processes.append(p)
@@ -450,15 +470,12 @@ class RWKMultiClient:
         self.is_running = False
         if hasattr(self, 'is_running_flag'):
             self.is_running_flag.value = False
-            
             for p in self.processes:
                 p.join(timeout=2)
-            
             for p in self.processes:
                 if p.is_alive():
                     p.terminate()
                     self.log_queue.put(f"MainProcess: Force terminated process {p.pid}")
-        
         self.master.destroy()
         os._exit(0)
 
