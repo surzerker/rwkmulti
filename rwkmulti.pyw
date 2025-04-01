@@ -22,9 +22,10 @@ DEFAULT_WINDOW_LAYOUTS = {
     "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],
     "9": [2, 2, 3, 4], "10": [2, 2, 3, 5], "11": [2, 2, 3, 6]
 }
+DEFAULT_WINDOW_BORDER_OFFSET = 0  # New default: no offset
 
 # Current version
-VERSION = "1.4.9"
+VERSION = "1.5.0"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -76,6 +77,7 @@ def load_config():
         key_rebindings = json.loads(config.get("Settings", "key_rebindings", fallback=json.dumps(DEFAULT_KEY_REBINDINGS)))
         auto_arrange = config.getint("Settings", "auto_arrange", fallback=DEFAULT_AUTO_ARRANGE)
         window_layouts = json.loads(config.get("Settings", "window_layouts", fallback=json.dumps(DEFAULT_WINDOW_LAYOUTS)))
+        window_border_offset = config.getint("Settings", "window_border_offset", fallback=DEFAULT_WINDOW_BORDER_OFFSET)
     else:
         server_url = DEFAULT_SERVER_URL
         use_default_profile = DEFAULT_USE_DEFAULT_PROFILE
@@ -84,10 +86,11 @@ def load_config():
         key_rebindings = DEFAULT_KEY_REBINDINGS
         auto_arrange = DEFAULT_AUTO_ARRANGE
         window_layouts = DEFAULT_WINDOW_LAYOUTS
-        save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts)
-    return server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts
+        window_border_offset = DEFAULT_WINDOW_BORDER_OFFSET
+        save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset)
+    return server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset
 
-def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts):
+def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset):
     config = configparser.ConfigParser()
     config.optionxform = str
     config["Settings"] = {
@@ -104,7 +107,9 @@ def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, 
         "# Auto-arrange windows (0 = no, 1 = yes)": "",
         "auto_arrange": str(auto_arrange),
         "# Window layouts (JSON, e.g., {\"0\": [monitor, rows, cols, position], ...})": "",
-        "window_layouts": json.dumps(window_layouts)
+        "window_layouts": json.dumps(window_layouts),
+        "# Window border offset in pixels (e.g., 8)": "",
+        "window_border_offset": str(window_border_offset)
     }
     with open(CONFIG_FILE, "w") as f:
         config.write(f)
@@ -185,7 +190,7 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
                     del pressed_keys[original_key.lower()]
     log_queue.put("Process-1: Keyboard process exiting")
 
-def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile, auto_arrange, window_layouts):
+def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile, auto_arrange, window_layouts, window_border_offset):
     special_keys_map = {
         'up': Keys.ARROW_UP, 'down': Keys.ARROW_DOWN,
         'left': Keys.ARROW_LEFT, 'right': Keys.ARROW_RIGHT,
@@ -227,28 +232,28 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 rows, cols, position = layout[1], layout[2], layout[3]
                 monitor = monitors[monitor_idx]
                 
-                # Base grid dimensions, adjusted for no gaps
-                base_width = monitor.width // cols
-                base_height = monitor.height // rows
-                extra_width = monitor.width % cols  # Distribute remainder
-                extra_height = monitor.height % rows
+                # Base grid dimensions, adjusted for border offset
+                base_width = (monitor.width - window_border_offset * cols) // cols
+                base_height = (monitor.height - window_border_offset * rows) // rows
+                extra_width = (monitor.width - window_border_offset * cols) % cols
+                extra_height = (monitor.height - window_border_offset * rows) % rows
                 col = (position - 1) % cols
                 row = (position - 1) // cols
                 window_width = base_width + (1 if col < extra_width else 0)
                 window_height = base_height + (1 if row < extra_height else 0)
 
-                # Set size first
+                # Set size
                 driver.set_window_size(window_width, window_height)
                 rect = driver.get_window_rect()
                 actual_width = rect['width']
                 actual_height = rect['height']
 
-                # Position based on actual previous windows, no gaps
-                x = monitor.x + sum(base_width + (1 if i < extra_width else 0) for i in range(col))
-                y = monitor.y + sum(base_height + (1 if i < extra_height else 0) for i in range(row))
+                # Position with offset to close gaps
+                x = monitor.x + sum(base_width + (1 if i < extra_width else 0) + window_border_offset for i in range(col))
+                y = monitor.y + sum(base_height + (1 if i < extra_height else 0) + window_border_offset for i in range(row))
                 driver.set_window_position(x, y)
 
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y}), size {actual_width}x{actual_height}")
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y}), size {actual_width}x{actual_height}, offset {window_border_offset}")
             except Exception as e:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange failed: {str(e)}")
         else:
@@ -295,7 +300,7 @@ class ConfigWindow:
         self.top.geometry("400x800")
         self.app = app
         
-        server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts = load_config()
+        server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset = load_config()
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
@@ -304,6 +309,7 @@ class ConfigWindow:
         self.key_rebindings = key_rebindings.copy()
         self.auto_arrange = IntVar(value=auto_arrange)
         self.window_layouts = window_layouts.copy()
+        self.window_border_offset = StringVar(value=str(window_border_offset))
         
         Label(self.top, text="Server URL:").pack(pady=5)
         Entry(self.top, textvariable=self.server_url, width=40).pack()
@@ -329,6 +335,9 @@ class ConfigWindow:
         self.layout_text = Text(self.top, height=10, width=40, wrap=WORD)
         self.layout_text.insert(END, json.dumps(self.window_layouts, indent=2))
         self.layout_text.pack()
+
+        Label(self.top, text="Window Border Offset (pixels, e.g., 8):").pack(pady=5)
+        Entry(self.top, textvariable=self.window_border_offset, width=10).pack()
 
         self.context_menu = Menu(self.top, tearoff=0)
         self.context_menu.add_command(label="Cut", command=self.cut)
@@ -363,15 +372,18 @@ class ConfigWindow:
             new_key_rebindings = json.loads(self.rebind_text.get("1.0", END).strip())
             new_window_layouts = json.loads(self.layout_text.get("1.0", END).strip())
             new_num_windows = int(self.num_game_windows.get())
+            new_window_border_offset = int(self.window_border_offset.get())
             if new_num_windows <= 0:
                 raise ValueError("Number of windows must be positive")
+            if new_window_border_offset < 0:
+                raise ValueError("Window border offset must be non-negative")
             for from_key, to_key in new_key_rebindings.items():
                 if not isinstance(from_key, str) or not isinstance(to_key, str) or len(from_key) != 1 or len(to_key) != 1:
                     raise ValueError("Key rebinding must map single keys (e.g., 'c' to 's')")
             for win_id, layout in new_window_layouts.items():
                 if not isinstance(win_id, str) or not isinstance(layout, list) or len(layout) != 4 or not all(isinstance(x, int) for x in layout) or layout[1] < 1 or layout[2] < 1 or layout[3] < 1:
                     raise ValueError("Window layouts must map ID to [monitor, rows, cols, pos] (e.g., '0': [1, 2, 3, 1])")
-            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys, new_key_rebindings, self.auto_arrange.get(), new_window_layouts)
+            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys, new_key_rebindings, self.auto_arrange.get(), new_window_layouts, new_window_border_offset)
             self.app.server_url = self.server_url.get()
             self.app.use_default_profile = self.use_default_profile.get()
             self.app.num_game_windows = new_num_windows
@@ -379,6 +391,7 @@ class ConfigWindow:
             self.app.key_rebindings = new_key_rebindings
             self.app.auto_arrange = self.auto_arrange.get()
             self.app.window_layouts = new_window_layouts
+            self.app.window_border_offset = new_window_border_offset
             self.app.num_window_entry.delete(0, END)
             self.app.num_window_entry.insert(END, str(new_num_windows))
             self.app.log_queue.put("MainProcess: Configuration updated successfully")
@@ -394,7 +407,7 @@ class RWKMultiClient:
         master.title("RWK Multibox Client")
         self.is_running = False
         self.is_paused = True
-        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self.key_rebindings, self.auto_arrange, self.window_layouts = load_config()
+        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self.key_rebindings, self.auto_arrange, self.window_layouts, self.window_border_offset = load_config()
         self.log_queue = mp.Queue()
         self.processes = []
         self.create_widgets()
@@ -458,7 +471,7 @@ class RWKMultiClient:
         keyboard_process.start()
         self.processes.append(keyboard_process)
         for i in range(self.num_game_windows):
-            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile, self.auto_arrange, self.window_layouts))
+            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile, self.auto_arrange, self.window_layouts, self.window_border_offset))
             p.daemon = True
             p.start()
             self.processes.append(p)
