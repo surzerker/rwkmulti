@@ -17,9 +17,9 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 
 ### Recent Updates & Fixes
 
-[version 1.4.3]
+<details> <summary><strong>Version 1.4.3</strong></summary>
 - **Key Rebinding** Added support for rebinding keys (1:1 only) in the Config. Note: ignore_key settings apply to the original key, so if you rebinded your "S" key to "C", you would want to ingore "S" for a fighter.
-[version 1.4.2]
+<details> <summary><strong>Version 1.4.2</strong></summary>
 - **Fixed Key-Sending Glitches:** No more missed keystrokes across windows.
 - **Improved Key Queue:** Limits the queue to the last two pressed keys, preventing lag from rapid inputs.
 - **Default Firefox Profile:** Optionally loads your main Firefox profile (with saved logins/cookies) instead of a temporary one. *(Thanks, Cagedangel!)*
