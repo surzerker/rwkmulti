@@ -130,12 +130,12 @@ def check_for_updates(log_queue):
         log_queue.put(f"MainProcess: Requesting {url_with_timestamp}")
         response = requests.get(url_with_timestamp, headers=headers, timeout=5, allow_redirects=True)
         response.raise_for_status()
-        remote_content = response.text.replace('\r\n', '\n')  # Normalize line endings
+        remote_content = response.content  # Use raw bytes
         log_queue.put("MainProcess: Successfully fetched remote file")
         
         # Primary version check
         remote_version = None
-        for line in remote_content.splitlines():
+        for line in remote_content.decode('utf-8').splitlines():  # Decode for version parsing
             if line.strip().startswith('VERSION = "'):
                 remote_version = line.strip().split('"')[1]
                 log_queue.put(f"MainProcess: Found remote version: {remote_version}")
@@ -157,10 +157,10 @@ def check_for_updates(log_queue):
                 log_queue.put("MainProcess: User chose to update")
                 script_path = sys.argv[0]
                 log_queue.put(f"MainProcess: Updating file at {script_path}")
-                with open(script_path, "w", encoding="utf-8") as f:
+                with open(script_path, "wb") as f:  # Binary write
                     f.write(remote_content)
                     f.flush()
-                    os.fsync(f.fileno())  # Ensure write completes
+                    os.fsync(f.fileno())
                 log_queue.put("MainProcess: New version downloaded")
                 time.sleep(0.5)
                 log_queue.put("MainProcess: Relaunching with new version")
@@ -171,10 +171,10 @@ def check_for_updates(log_queue):
         else:
             log_queue.put("MainProcess: No update needed based on version (remote <= local)")
             log_queue.put("MainProcess: Performing checksum comparison...")
-            remote_hash = hashlib.sha256(remote_content.encode('utf-8')).hexdigest()
+            remote_hash = hashlib.sha256(remote_content).hexdigest()  # Hash raw bytes
             script_path = sys.argv[0]
             with open(script_path, "rb") as f:
-                local_content = f.read()  # Binary read
+                local_content = f.read()
             local_hash = hashlib.sha256(local_content).hexdigest()
             log_queue.put(f"MainProcess: Local hash: {local_hash[:8]}..., Remote hash: {remote_hash[:8]}...")
             
@@ -185,7 +185,7 @@ def check_for_updates(log_queue):
                                        "This suggests the current release may have updates not reflected in the version.\n"
                                        "Download and update now?"):
                     log_queue.put("MainProcess: User chose to update due to checksum mismatch")
-                    with open(script_path, "w", encoding="utf-8") as f:
+                    with open(script_path, "wb") as f:  # Binary write
                         f.write(remote_content)
                         f.flush()
                         os.fsync(f.fileno())
