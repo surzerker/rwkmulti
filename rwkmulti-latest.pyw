@@ -23,7 +23,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 }
 
 # Current version
-VERSION = "1.4.4"
+VERSION = "1.4.5"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -54,11 +54,14 @@ except ImportError:
     missing_libs.append("screeninfo")
 
 if missing_libs:
-    error_msg = "The following required libraries are missing:\n\n" + \
-                "\n".join(f"- {lib}" for lib in missing_libs) + \
-                "\n\nPlease install them by running these commands in your terminal:\n" + \
-                "\n".join(f"pip3 install {lib}" for lib in missing_libs) + \
-                "\n\nAfter installing, restart the script."
+    # Reformatted to avoid continuation issues
+    error_msg = (
+        "The following required libraries are missing:\n\n" +
+        "\n".join(f"- {lib}" for lib in missing_libs) +
+        "\n\nPlease install them by running these commands in your terminal:\n" +
+        "\n".join(f"pip3 install {lib}" for lib in missing_libs) +
+        "\n\nAfter installing, restart the script."
+    )
     messagebox.showerror("Missing Dependencies", error_msg)
     sys.exit(1)
 
@@ -155,6 +158,7 @@ def check_for_updates(log_queue):
     except Exception as e:
         log_queue.put(f"MainProcess: Update error: {str(e)}")
 
+# Rest of the script (unchanged from here down)
 def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue, key_rebindings):
     pressed_keys = {}
     log_queue.put("Process-1: Keyboard process started")
@@ -215,18 +219,17 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
 
-    # Auto-arrange if enabled
     if auto_arrange and str(window_id) in window_layouts:
         try:
             monitors = screeninfo.get_monitors()
-            layout = window_layouts[str(window_id)]  # [monitor, rows, cols, position]
-            monitor_idx = min(layout[0] - 1, len(monitors) - 1)  # 1-based monitor number
+            layout = window_layouts[str(window_id)]
+            monitor_idx = min(layout[0] - 1, len(monitors) - 1)
             rows, cols, position = layout[1], layout[2], layout[3]
             monitor = monitors[monitor_idx]
             window_width = monitor.width // cols
             window_height = monitor.height // rows
-            col = (position - 1) % cols  # 0-based column
-            row = (position - 1) // cols  # 0-based row
+            col = (position - 1) % cols
+            row = (position - 1) // cols
             x = monitor.x + col * window_width
             y = monitor.y + row * window_height
             driver.set_window_position(x, y)
