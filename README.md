@@ -9,7 +9,7 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 
 ## Important Notes
 
-- The main script is now `rwkmulti-latest.pyw`.
+- The main script is `rwkmulti.pyw`.
 - Use the latest Firefox version to avoid a bug where pages scroll when keys are sent.
 - Windows 11 users typically don’t need GeckoDriver—Selenium works directly with Firefox.
 
@@ -26,7 +26,6 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 - **Fixed Key-Sending Glitches:** No more missed keystrokes across windows.
 - **Improved Key Queue:** Limits the queue to the last two pressed keys, preventing lag from rapid inputs.
 - **Default Firefox Profile:** Optionally loads your main Firefox profile (with saved logins/cookies) instead of a temporary one. *(Thanks, Cagedangel!)*
-- **New Name:** Renamed to `rwkmulti-latest.pyw` for auto-update support.
 - **Auto-Update Feature:** Checks for updates on startup and prompts to download if a newer version exists, preserving your config during updates.
 - **Config Button & File:** A **Config** button opens an editor for `rwkmulti_settings.cfg`, storing your server URL, profile setting, and key ignore preferences.
 - **Better Error Handling:** Popups guide you to install missing libraries (e.g., Selenium) if needed.
@@ -55,13 +54,13 @@ Only needed for older Windows versions. [Download from GitHub](https://github.co
 
 ## Installation
 
-1. Download `rwkmulti-latest.pyw` and save it anywhere on your computer.
+1. Download `rwkmulti.pyw` and save it anywhere on your computer.
 2. Double-click to run it.
 
 ## Usage
 
 ### Start the Script
-- Launch `rwkmulti-latest.pyw`.
+- Launch `rwkmulti.pyw`.
 - If an update’s available, you’ll get a prompt to download it.
 
 ### Set Up Windows
