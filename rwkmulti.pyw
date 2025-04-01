@@ -22,11 +22,11 @@ DEFAULT_WINDOW_LAYOUTS = {
     "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],
     "9": [2, 2, 3, 4], "10": [2, 2, 3, 5], "11": [2, 2, 3, 6]
 }
-DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0  # New: horizontal offset
-DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0    # New: vertical offset
+DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
+DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
 # Current version
-VERSION = "1.5.3"
+VERSION = "1.5.4"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -224,7 +224,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
 
     driver.get(server_url)
     wait = WebDriverWait(driver, 10)
-    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+    body = wait.until(EC.presence_of_element_located((By_TAG_NAME, 'body')))
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
 
@@ -306,7 +306,7 @@ class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x850")
+        self.top.geometry("600x500")
         self.app = app
         
         server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings, auto_arrange, window_layouts, window_border_offset_horizontal, window_border_offset_vertical = load_config()
@@ -321,45 +321,49 @@ class ConfigWindow:
         self.window_border_offset_horizontal = StringVar(value=str(window_border_offset_horizontal))
         self.window_border_offset_vertical = StringVar(value=str(window_border_offset_vertical))
         
-        Label(self.top, text="Server URL:").pack(pady=5)
-        Entry(self.top, textvariable=self.server_url, width=40).pack()
+        # Left column (col 0-1)
+        Label(self.top, text="Server URL:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
+        Entry(self.top, textvariable=self.server_url, width=30).grid(row=0, column=1, sticky="w", padx=5, pady=5)
         
-        Checkbutton(self.top, text="Use Default Firefox Profile", variable=self.use_default_profile).pack(pady=5)
+        Checkbutton(self.top, text="Use Default Firefox Profile", variable=self.use_default_profile).grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=5)
         
-        Label(self.top, text="Number of Game Windows:").pack(pady=5)
-        Entry(self.top, textvariable=self.num_game_windows, width=10).pack()
+        Label(self.top, text="Number of Game Windows:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
+        Entry(self.top, textvariable=self.num_game_windows, width=10).grid(row=2, column=1, sticky="w", padx=5, pady=5)
         
-        Label(self.top, text="Key Ignore Settings (JSON, e.g., {\"Pattern\": [\"key1\", \"key2\"]})").pack(pady=5)
-        self.ignore_text = Text(self.top, height=10, width=40, wrap=WORD)
+        Checkbutton(self.top, text="Auto-Arrange Windows", variable=self.auto_arrange).grid(row=3, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+        
+        Label(self.top, text="Horizontal Offset (px):").grid(row=4, column=0, sticky="e", padx=5, pady=5)
+        Entry(self.top, textvariable=self.window_border_offset_horizontal, width=10).grid(row=4, column=1, sticky="w", padx=5, pady=5)
+        
+        # Right column (col 2-3)
+        Label(self.top, text="Key Ignore Settings (JSON):").grid(row=0, column=2, sticky="e", padx=5, pady=5)
+        self.ignore_text = Text(self.top, height=5, width=30, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
-        self.ignore_text.pack()
+        self.ignore_text.grid(row=0, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Key Rebindings (JSON, e.g., {\"c\": \"s\", \"s\": \"c\"})").pack(pady=5)
-        self.rebind_text = Text(self.top, height=10, width=40, wrap=WORD)
+        Label(self.top, text="Key Rebindings (JSON):").grid(row=1, column=2, sticky="e", padx=5, pady=5)
+        self.rebind_text = Text(self.top, height=5, width=30, wrap=WORD)
         self.rebind_text.insert(END, json.dumps(self.key_rebindings, indent=2))
-        self.rebind_text.pack()
+        self.rebind_text.grid(row=1, column=3, sticky="w", padx=5, pady=5)
 
-        Checkbutton(self.top, text="Auto-Arrange Windows", variable=self.auto_arrange).pack(pady=5)
-        
-        Label(self.top, text="Window Layouts (JSON, e.g., {\"0\": [monitor, rows, cols, pos], ...})").pack(pady=5)
-        self.layout_text = Text(self.top, height=10, width=40, wrap=WORD)
+        Label(self.top, text="Window Layouts (JSON):").grid(row=2, column=2, sticky="e", padx=5, pady=5)
+        self.layout_text = Text(self.top, height=5, width=30, wrap=WORD)
         self.layout_text.insert(END, json.dumps(self.window_layouts, indent=2))
-        self.layout_text.pack()
+        self.layout_text.grid(row=2, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Window Border Offset Horizontal (pixels, e.g., 8):").pack(pady=5)
-        Entry(self.top, textvariable=self.window_border_offset_horizontal, width=10).pack()
+        Label(self.top, text="Vertical Offset (px):").grid(row=3, column=2, sticky="e", padx=5, pady=5)
+        Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).grid(row=3, column=3, sticky="w", padx=5, pady=5)
 
-        Label(self.top, text="Window Border Offset Vertical (pixels, e.g., 10):").pack(pady=5)
-        Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).pack()
+        # Save button across bottom
+        Button(self.top, text="Save and Close", command=self.save).grid(row=5, column=0, columnspan=4, pady=10)
 
+        # Context menu for text widgets
         self.context_menu = Menu(self.top, tearoff=0)
         self.context_menu.add_command(label="Cut", command=self.cut)
         self.context_menu.add_command(label="Copy", command=self.copy)
         self.context_menu.add_command(label="Paste", command=self.paste)
         for widget in [self.ignore_text, self.rebind_text, self.layout_text]:
             widget.bind("<Button-3>", self.show_context_menu)
-
-        Button(self.top, text="Save and Close", command=self.save).pack(pady=10)
 
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
