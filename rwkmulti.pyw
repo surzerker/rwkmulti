@@ -251,7 +251,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 firefox_profile.set_preference("signon.autofillForms", True)
                 firefox_profile.set_preference("signon.rememberSignons", True)
 
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile} with 60% zoom")
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile}")
             options.profile = firefox_profile
         driver = webdriver.Firefox(options=options)
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox launched")
