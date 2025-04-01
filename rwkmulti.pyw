@@ -8,6 +8,8 @@ import multiprocessing as mp
 import configparser
 import json
 import traceback
+import shutil
+import hashlib
 
 # Default settings
 DEFAULT_SERVER_URL = "https://rwk2.racewarkingdoms.com/"
@@ -26,7 +28,7 @@ DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
 DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
 # Current version
-VERSION = "1.5.6"
+VERSION = "1.5.7"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -130,6 +132,8 @@ def check_for_updates(log_queue):
         response.raise_for_status()
         remote_content = response.text
         log_queue.put("MainProcess: Successfully fetched remote file")
+        
+        # Primary version check
         remote_version = None
         for line in remote_content.splitlines():
             if line.strip().startswith('VERSION = "'):
@@ -139,9 +143,11 @@ def check_for_updates(log_queue):
         if not remote_version:
             log_queue.put("MainProcess: No VERSION found in remote file")
             return
+        
         local_ver_tuple = tuple(map(int, VERSION.split(".")))
         remote_ver_tuple = tuple(map(int, remote_version.split(".")))
         log_queue.put(f"MainProcess: Local version: {VERSION}, Remote version: {remote_version}")
+        
         if remote_ver_tuple > local_ver_tuple:
             log_queue.put("MainProcess: Newer version detected, prompting user")
             if messagebox.askyesno("Update Available",
@@ -162,7 +168,36 @@ def check_for_updates(log_queue):
             else:
                 log_queue.put("MainProcess: User declined update")
         else:
-            log_queue.put("MainProcess: No update needed (remote <= local)")
+            log_queue.put("MainProcess: No update needed based on version (remote <= local)")
+            # Secondary checksum check
+            log_queue.put("MainProcess: Performing checksum comparison...")
+            remote_hash = hashlib.sha256(remote_content.encode('utf-8')).hexdigest()
+            script_path = sys.argv[0]
+            with open(script_path, "r", encoding="utf-8") as f:
+                local_content = f.read()
+            local_hash = hashlib.sha256(local_content.encode('utf-8')).hexdigest()
+            log_queue.put(f"MainProcess: Local hash: {local_hash[:8]}..., Remote hash: {remote_hash[:8]}...")
+            
+            if remote_hash != local_hash:
+                log_queue.put("MainProcess: Checksum mismatch detected, prompting user")
+                if messagebox.askyesno("Update Available (Checksum Mismatch)",
+                                       f"The version numbers match or are lower ({remote_version} vs {VERSION}), but the file contents differ.\n"
+                                       "This suggests the current release may have updates not reflected in the version.\n"
+                                       "Download and update now?"):
+                    log_queue.put("MainProcess: User chose to update due to checksum mismatch")
+                    with open(script_path, "w", encoding="utf-8") as f:
+                        f.write(remote_content)
+                        f.flush()
+                    log_queue.put("MainProcess: Updated file downloaded")
+                    time.sleep(0.5)
+                    log_queue.put("MainProcess: Relaunching with updated version")
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                    sys.exit(0)
+                else:
+                    log_queue.put("MainProcess: User declined checksum-based update")
+            else:
+                log_queue.put("MainProcess: Checksums match, no update required")
+                
     except requests.RequestException as e:
         log_queue.put(f"MainProcess: Failed to check for updates: {str(e)}")
     except Exception as e:
@@ -214,7 +249,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 firefox_profile = FirefoxProfile(default_profile)
                 firefox_profile.set_preference("signon.autofillForms", True)
                 firefox_profile.set_preference("signon.rememberSignons", True)
-                firefox_profile.set_preference("layout.css.devPixelsPerPx", "0.6")  # Set zoom to 60%
+
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile} with 60% zoom")
             options.profile = firefox_profile
         driver = webdriver.Firefox(options=options)
@@ -365,7 +400,7 @@ class ConfigWindow:
         Label(self.top, text="Horizontal Offset (px):").grid(row=4, column=0, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.window_border_offset_horizontal, width=10).grid(row=4, column=1, sticky="w", padx=5, pady=5)
         
-        # Right column (col 2-3) with line break
+        # Right column (col 2-3)
         Label(self.top, text="Key Ignore Settings (JSON):").grid(row=1, column=2, sticky="e", padx=5, pady=5)
         self.ignore_text = Text(self.top, height=5, width=35, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
@@ -384,8 +419,9 @@ class ConfigWindow:
         Label(self.top, text="Vertical Offset (px):").grid(row=4, column=2, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).grid(row=4, column=3, sticky="w", padx=5, pady=5)
 
-        # Save button across bottom
-        Button(self.top, text="Save and Close", command=self.save).grid(row=5, column=0, columnspan=4, pady=10)
+        # Buttons across bottom
+        Button(self.top, text="Save and Close", command=self.save).grid(row=5, column=0, columnspan=2, pady=10)
+        Button(self.top, text="Clear Temp Data", command=self.clear_temp_data).grid(row=5, column=2, columnspan=2, pady=10)
 
         # Context menu for text widgets
         self.context_menu = Menu(self.top, tearoff=0)
@@ -394,6 +430,34 @@ class ConfigWindow:
         self.context_menu.add_command(label="Paste", command=self.paste)
         for widget in [self.ignore_text, self.rebind_text, self.layout_text]:
             widget.bind("<Button-3>", self.show_context_menu)
+
+    def clear_temp_data(self):
+        """Clear Selenium temporary profile folders from the temp directory."""
+        temp_dir = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Temp')  # C:\Users\<username>\AppData\Local\Temp
+        deleted_count = 0
+        total_size = 0
+        try:
+            for folder in os.listdir(temp_dir):
+                # Match 'rust_mozprofile*' and 'tmp*' folders
+                if folder.startswith('rust_mozprofile') or folder.startswith('tmp'):
+                    folder_path = os.path.join(temp_dir, folder)
+                    try:
+                        total_size += sum(os.path.getsize(os.path.join(dirpath, filename)) 
+                                        for dirpath, _, filenames in os.walk(folder_path) 
+                                        for filename in filenames)
+                        shutil.rmtree(folder_path)
+                        deleted_count += 1
+                        self.app.log_queue.put(f"Config: Deleted temp folder {folder_path}")
+                    except Exception as e:
+                        self.app.log_queue.put(f"Config: Failed to delete {folder_path}: {str(e)}")
+            if deleted_count > 0:
+                size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
+                self.app.log_queue.put(f"Config: Cleared {deleted_count} temp folders, freed {size_mb:.2f} MB")
+            else:
+                self.app.log_queue.put("Config: No Selenium temp folders found to clear")
+        except Exception as e:
+            self.app.log_queue.put(f"Config: Error scanning temp directory: {str(e)}")
+            messagebox.showerror("Error", f"Failed to clear temp data: {str(e)}")
 
     def show_context_menu(self, event):
         self.context_menu.post(event.x_root, event.y_root)
