@@ -19,7 +19,7 @@ DEFAULT_IGNORE_KEYS = {
 DEFAULT_KEY_REBINDINGS = {}
 
 # Current version of this script
-VERSION = "1.4.3"
+VERSION = "1.4.4"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -99,7 +99,13 @@ def check_for_updates(log_queue):
     try:
         timestamp = str(time.time())
         url_with_timestamp = f"{GITHUB_URL}?t={timestamp}"
-        response = requests.get(url_with_timestamp, timeout=5)
+        headers = {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "If-Modified-Since": "0"  # Force server to check for updates
+        }
+        log_queue.put(f"MainProcess: Requesting {url_with_timestamp}")
+        response = requests.get(url_with_timestamp, headers=headers, timeout=5)
         response.raise_for_status()
         remote_content = response.text
         log_queue.put("MainProcess: Successfully fetched remote file")
