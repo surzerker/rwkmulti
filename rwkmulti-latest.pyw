@@ -16,9 +16,10 @@ DEFAULT_IGNORE_KEYS = {
     "Surzerker": ["c"],
     "Spongebob": ["a"]
 }
+DEFAULT_KEY_REBINDINGS = {}
 
 # Current version of this script
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -65,15 +66,17 @@ def load_config():
         use_default_profile = config.getint("Settings", "use_default_profile", fallback=DEFAULT_USE_DEFAULT_PROFILE)
         num_game_windows = config.getint("Settings", "num_game_windows", fallback=DEFAULT_NUM_GAME_WINDOWS)
         ignore_keys = json.loads(config.get("Settings", "ignore_keys", fallback=json.dumps(DEFAULT_IGNORE_KEYS)))
+        key_rebindings = json.loads(config.get("Settings", "key_rebindings", fallback=json.dumps(DEFAULT_KEY_REBINDINGS)))
     else:
         server_url = DEFAULT_SERVER_URL
         use_default_profile = DEFAULT_USE_DEFAULT_PROFILE
         num_game_windows = DEFAULT_NUM_GAME_WINDOWS
         ignore_keys = DEFAULT_IGNORE_KEYS
-        save_config(server_url, use_default_profile, num_game_windows, ignore_keys)
-    return server_url, use_default_profile, num_game_windows, ignore_keys
+        key_rebindings = DEFAULT_KEY_REBINDINGS
+        save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings)
+    return server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings
 
-def save_config(server_url, use_default_profile, num_game_windows, ignore_keys):
+def save_config(server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings):
     config = configparser.ConfigParser()
     config.optionxform = str  # Preserve case in keys
     config["Settings"] = {
@@ -84,7 +87,9 @@ def save_config(server_url, use_default_profile, num_game_windows, ignore_keys):
         "# Number of game windows to open": "",
         "num_game_windows": str(num_game_windows),
         "# Ignore keys by window title pattern (JSON format, e.g., {\"Pattern\": [\"key1\", \"key2\"]})": "",
-        "ignore_keys": json.dumps(ignore_keys)
+        "ignore_keys": json.dumps(ignore_keys),
+        "# Key rebinding (JSON format, e.g., {\"c\": \"s\", \"s\": \"c\"})": "",
+        "key_rebindings": json.dumps(key_rebindings)
     }
     with open(CONFIG_FILE, "w") as f:
         config.write(f)
@@ -138,27 +143,30 @@ def check_for_updates(log_queue):
     except Exception as e:
         log_queue.put(f"MainProcess: Update error: {str(e)}")
 
-def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue):
+def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue, key_rebindings):
     pressed_keys = {}
     log_queue.put("Process-1: Keyboard process started")
     while is_running_flag.value:
         if not is_paused_flag.value:
             event = keyboard.read_event(suppress=True)
-            input_key = event.name
+            original_key = event.name
             if event.event_type == keyboard.KEY_DOWN:
-                if input_key.lower() not in pressed_keys:
-                    pressed_keys[input_key.lower()] = True
+                if original_key.lower() not in pressed_keys:
+                    pressed_keys[original_key.lower()] = True
+                    # Apply key rebinding
+                    remapped_key = key_rebindings.get(original_key.lower(), original_key)
                     for i, q in enumerate(key_queues):
                         while q.qsize() >= 2:
                             try:
                                 q.get_nowait()
                             except queue.Empty:
                                 break
-                        q.put(input_key)
-                        log_queue.put(f"Process-1: Sent {input_key} to queue {i}")
+                        # Send tuple of (original_key, remapped_key)
+                        q.put((original_key, remapped_key))
+                        log_queue.put(f"Process-1: Sent {remapped_key} (rebound from {original_key}) to queue {i}")
             elif event.event_type == keyboard.KEY_UP:
-                if input_key.lower() in pressed_keys:
-                    del pressed_keys[input_key.lower()]
+                if original_key.lower() in pressed_keys:
+                    del pressed_keys[original_key.lower()]
     log_queue.put("Process-1: Keyboard process exiting")
 
 def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile):
@@ -169,7 +177,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
-        if use_default_profile:  # Use the passed parameter
+        if use_default_profile:
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
@@ -200,25 +208,27 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     while is_running_flag.value:
         if not is_paused_flag.value:
             try:
-                input_key = key_queue.get(timeout=0.05)
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} got key: {input_key}")
-                selenium_key = special_keys_map.get(input_key, input_key)
+                # Expect a tuple (original_key, remapped_key)
+                original_key, remapped_key = key_queue.get(timeout=0.05)
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} got key: {remapped_key} (from {original_key})")
+                selenium_key = special_keys_map.get(remapped_key, remapped_key)
                 window_title = driver.title.lower()
+                # Check original key against ignore list
                 should_ignore = any(
-                    input_key.lower() in [k.lower() for k in keys]
+                    original_key.lower() in [k.lower() for k in keys]
                     for pattern, keys in ignore_keys.items()
                     if pattern.lower() in window_title
                 )
                 if not should_ignore:
                     try:
                         body.send_keys(selenium_key)
-                        log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {input_key} to {window_title}")
+                        log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {remapped_key} to {window_title}")
                     except EC.StaleElementReferenceException:
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
                         body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
                         ActionChains(driver).move_to_element(body).click().perform()
                         body.send_keys(selenium_key)
-                        log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {input_key} to {window_title} after refresh")
+                        log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {remapped_key} to {window_title} after refresh")
             except queue.Empty:
                 continue
             except Exception as e:
@@ -231,16 +241,17 @@ class ConfigWindow:
     def __init__(self, parent, app):
         self.top = Toplevel(parent)
         self.top.title("RWK Multi Config")
-        self.top.geometry("400x500")
+        self.top.geometry("400x600")
         self.app = app
         
         # Load fresh config from file
-        server_url, use_default_profile, num_game_windows, ignore_keys = load_config()
+        server_url, use_default_profile, num_game_windows, ignore_keys, key_rebindings = load_config()
         
         self.server_url = StringVar(value=server_url)
         self.use_default_profile = IntVar(value=use_default_profile)
         self.num_game_windows = StringVar(value=str(num_game_windows))
         self.ignore_keys = ignore_keys.copy()
+        self.key_rebindings = key_rebindings.copy()
         
         Label(self.top, text="Server URL:").pack(pady=5)
         Entry(self.top, textvariable=self.server_url, width=40).pack()
@@ -251,16 +262,22 @@ class ConfigWindow:
         Entry(self.top, textvariable=self.num_game_windows, width=10).pack()
         
         Label(self.top, text="Key Ignore Settings (JSON, e.g., {\"Pattern\": [\"key1\", \"key2\"]})").pack(pady=5)
-        self.ignore_text = Text(self.top, height=15, width=40, wrap=WORD)
+        self.ignore_text = Text(self.top, height=10, width=40, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
         self.ignore_text.pack()
 
-        # Right-click context menu
+        Label(self.top, text="Key Rebindings (JSON, e.g., {\"c\": \"s\", \"s\": \"c\"})").pack(pady=5)
+        self.rebind_text = Text(self.top, height=10, width=40, wrap=WORD)
+        self.rebind_text.insert(END, json.dumps(self.key_rebindings, indent=2))
+        self.rebind_text.pack()
+
+        # Right-click context menu for both text fields
         self.context_menu = Menu(self.top, tearoff=0)
         self.context_menu.add_command(label="Cut", command=self.cut)
         self.context_menu.add_command(label="Copy", command=self.copy)
         self.context_menu.add_command(label="Paste", command=self.paste)
         self.ignore_text.bind("<Button-3>", self.show_context_menu)
+        self.rebind_text.bind("<Button-3>", self.show_context_menu)
 
         Button(self.top, text="Save and Close", command=self.save).pack(pady=10)
 
@@ -268,31 +285,45 @@ class ConfigWindow:
         self.context_menu.post(event.x_root, event.y_root)
 
     def cut(self):
-        self.ignore_text.event_generate("<<Cut>>")
+        if self.top.focus_get() == self.ignore_text:
+            self.ignore_text.event_generate("<<Cut>>")
+        elif self.top.focus_get() == self.rebind_text:
+            self.rebind_text.event_generate("<<Cut>>")
 
     def copy(self):
-        self.ignore_text.event_generate("<<Copy>>")
+        if self.top.focus_get() == self.ignore_text:
+            self.ignore_text.event_generate("<<Copy>>")
+        elif self.top.focus_get() == self.rebind_text:
+            self.rebind_text.event_generate("<<Copy>>")
 
     def paste(self):
-        self.ignore_text.event_generate("<<Paste>>")
+        if self.top.focus_get() == self.ignore_text:
+            self.ignore_text.event_generate("<<Paste>>")
+        elif self.top.focus_get() == self.rebind_text:
+            self.rebind_text.event_generate("<<Paste>>")
 
     def save(self):
         try:
             new_ignore_keys = json.loads(self.ignore_text.get("1.0", END).strip())
+            new_key_rebindings = json.loads(self.rebind_text.get("1.0", END).strip())
             new_num_windows = int(self.num_game_windows.get())
             if new_num_windows <= 0:
                 raise ValueError("Number of windows must be positive")
-            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys)
+            for from_key, to_key in new_key_rebindings.items():
+                if not isinstance(from_key, str) or not isinstance(to_key, str) or len(from_key) != 1 or len(to_key) != 1:
+                    raise ValueError("Key rebinding must map single keys (e.g., 'c' to 's')")
+            save_config(self.server_url.get(), self.use_default_profile.get(), new_num_windows, new_ignore_keys, new_key_rebindings)
             self.app.server_url = self.server_url.get()
             self.app.use_default_profile = self.use_default_profile.get()
             self.app.num_game_windows = new_num_windows
             self.app.ignore_keys = new_ignore_keys
+            self.app.key_rebindings = new_key_rebindings
             self.app.num_window_entry.delete(0, END)
             self.app.num_window_entry.insert(END, str(new_num_windows))
             self.app.log_queue.put("MainProcess: Configuration updated successfully")
             self.top.destroy()
-        except json.JSONDecodeError:
-            messagebox.showerror("Error", "Invalid JSON format for ignore keys")
+        except json.JSONDecodeError as e:
+            messagebox.showerror("Error", f"Invalid JSON format: {str(e)}")
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
@@ -304,7 +335,7 @@ class RWKMultiClient:
         self.is_running = False
         self.is_paused = True
         
-        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys = load_config()
+        self.server_url, self.use_default_profile, self.num_game_windows, self.ignore_keys, self.key_rebindings = load_config()
         
         self.log_queue = mp.Queue()
         self.processes = []
@@ -374,7 +405,7 @@ class RWKMultiClient:
         self.is_running_flag = mp.Value('b', True)
         self.is_paused_flag = mp.Value('b', True)
         
-        keyboard_process = mp.Process(target=monitor_keyboard_process, args=(self.key_queues, self.is_running_flag, self.is_paused_flag, self.log_queue))
+        keyboard_process = mp.Process(target=monitor_keyboard_process, args=(self.key_queues, self.is_running_flag, self.is_paused_flag, self.log_queue, self.key_rebindings))
         keyboard_process.daemon = True
         keyboard_process.start()
         self.processes.append(keyboard_process)
