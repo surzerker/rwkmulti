@@ -19,7 +19,7 @@ DEFAULT_IGNORE_KEYS = {
 DEFAULT_KEY_REBINDINGS = {}
 
 # Current version of this script
-VERSION = "1.4.3"
+VERSION = "1.4.4"
 
 # GitHub raw URL for the latest version
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
@@ -153,7 +153,6 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
             if event.event_type == keyboard.KEY_DOWN:
                 if original_key.lower() not in pressed_keys:
                     pressed_keys[original_key.lower()] = True
-                    # Apply key rebinding
                     remapped_key = key_rebindings.get(original_key.lower(), original_key)
                     for i, q in enumerate(key_queues):
                         while q.qsize() >= 2:
@@ -161,9 +160,11 @@ def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_qu
                                 q.get_nowait()
                             except queue.Empty:
                                 break
-                        # Send tuple of (original_key, remapped_key)
                         q.put((original_key, remapped_key))
-                        log_queue.put(f"Process-1: Sent {remapped_key} (rebound from {original_key}) to queue {i}")
+                        if original_key.lower() != remapped_key.lower():
+                            log_queue.put(f"Process-1: Sent {remapped_key} (rebound from {original_key}) to queue {i}")
+                        else:
+                            log_queue.put(f"Process-1: Sent {original_key} to queue {i}")
             elif event.event_type == keyboard.KEY_UP:
                 if original_key.lower() in pressed_keys:
                     del pressed_keys[original_key.lower()]
@@ -208,12 +209,10 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     while is_running_flag.value:
         if not is_paused_flag.value:
             try:
-                # Expect a tuple (original_key, remapped_key)
                 original_key, remapped_key = key_queue.get(timeout=0.05)
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} got key: {remapped_key} (from {original_key})")
-                selenium_key = special_keys_map.get(remapped_key, remapped_key)
+                selenium_key = special_keys_map.get(remapped_key.lower(), remapped_key)
                 window_title = driver.title.lower()
-                # Check original key against ignore list
                 should_ignore = any(
                     original_key.lower() in [k.lower() for k in keys]
                     for pattern, keys in ignore_keys.items()
