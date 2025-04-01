@@ -128,9 +128,9 @@ def check_for_updates(log_queue):
         url_with_timestamp = f"{GITHUB_URL}?t={timestamp}"
         headers = {"Cache-Control": "no-cache", "Pragma": "no-cache", "If-Modified-Since": "0"}
         log_queue.put(f"MainProcess: Requesting {url_with_timestamp}")
-        response = requests.get(url_with_timestamp, headers=headers, timeout=5)
+        response = requests.get(url_with_timestamp, headers=headers, timeout=5, allow_redirects=True)
         response.raise_for_status()
-        remote_content = response.text
+        remote_content = response.text.replace('\r\n', '\n')  # Normalize line endings
         log_queue.put("MainProcess: Successfully fetched remote file")
         
         # Primary version check
@@ -160,6 +160,7 @@ def check_for_updates(log_queue):
                 with open(script_path, "w", encoding="utf-8") as f:
                     f.write(remote_content)
                     f.flush()
+                    os.fsync(f.fileno())  # Ensure write completes
                 log_queue.put("MainProcess: New version downloaded")
                 time.sleep(0.5)
                 log_queue.put("MainProcess: Relaunching with new version")
@@ -169,13 +170,12 @@ def check_for_updates(log_queue):
                 log_queue.put("MainProcess: User declined update")
         else:
             log_queue.put("MainProcess: No update needed based on version (remote <= local)")
-            # Secondary checksum check
             log_queue.put("MainProcess: Performing checksum comparison...")
             remote_hash = hashlib.sha256(remote_content.encode('utf-8')).hexdigest()
             script_path = sys.argv[0]
-            with open(script_path, "r", encoding="utf-8") as f:
-                local_content = f.read()
-            local_hash = hashlib.sha256(local_content.encode('utf-8')).hexdigest()
+            with open(script_path, "rb") as f:
+                local_content = f.read()  # Binary read
+            local_hash = hashlib.sha256(local_content).hexdigest()
             log_queue.put(f"MainProcess: Local hash: {local_hash[:8]}..., Remote hash: {remote_hash[:8]}...")
             
             if remote_hash != local_hash:
@@ -188,6 +188,7 @@ def check_for_updates(log_queue):
                     with open(script_path, "w", encoding="utf-8") as f:
                         f.write(remote_content)
                         f.flush()
+                        os.fsync(f.fileno())
                     log_queue.put("MainProcess: Updated file downloaded")
                     time.sleep(0.5)
                     log_queue.put("MainProcess: Relaunching with updated version")
