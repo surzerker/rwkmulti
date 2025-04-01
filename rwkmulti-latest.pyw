@@ -7,6 +7,7 @@ import queue
 import multiprocessing as mp
 import configparser
 import json
+import traceback
 
 # Default settings
 DEFAULT_SERVER_URL = "https://rwk2.racewarkingdoms.com/"
@@ -23,7 +24,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 }
 
 # Current version
-VERSION = "1.4.5"
+VERSION = "1.4.6"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -54,7 +55,6 @@ except ImportError:
     missing_libs.append("screeninfo")
 
 if missing_libs:
-    # Reformatted to avoid continuation issues
     error_msg = (
         "The following required libraries are missing:\n\n" +
         "\n".join(f"- {lib}" for lib in missing_libs) +
@@ -158,7 +158,6 @@ def check_for_updates(log_queue):
     except Exception as e:
         log_queue.put(f"MainProcess: Update error: {str(e)}")
 
-# Rest of the script (unchanged from here down)
 def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue, key_rebindings):
     pressed_keys = {}
     log_queue.put("Process-1: Keyboard process started")
@@ -483,7 +482,31 @@ class RWKMultiClient:
         self.master.destroy()
         os._exit(0)
 
-if __name__ == "__main__":
+def show_error_popup(title, message):
     root = Tk()
-    app = RWKMultiClient(root)
+    root.withdraw()  # Hide root window
+    top = Toplevel()
+    top.title(title)
+    top.geometry("400x300")
+    text = Text(top, wrap=WORD, height=15, width=50)
+    text.insert(END, message)
+    text.pack(expand=True, fill=BOTH, padx=5, pady=5)
+    scrollbar = Scrollbar(top, command=text.yview)
+    scrollbar.pack(side=RIGHT, fill=Y)
+    text['yscrollcommand'] = scrollbar.set
+    Button(top, text="OK", command=lambda: [top.destroy(), root.destroy(), sys.exit(1)]).pack(pady=5)
+    top.protocol("WM_DELETE_WINDOW", lambda: [top.destroy(), root.destroy(), sys.exit(1)])
     root.mainloop()
+
+if __name__ == "__main__":
+    try:
+        root = Tk()
+        app = RWKMultiClient(root)
+        root.mainloop()
+    except Exception as e:
+        error_details = (
+            f"Error Type: {type(e).__name__}\n"
+            f"Message: {str(e)}\n"
+            f"Traceback:\n{''.join(traceback.format_tb(e.__traceback__))}"
+        )
+        show_error_popup("Script Error", error_details)
