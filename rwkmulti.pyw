@@ -24,7 +24,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 }
 
 # Current version
-VERSION = "1.4.7"
+VERSION = "1.4.8"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -214,7 +214,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
 
     driver.get(server_url)
     wait = WebDriverWait(driver, 10)
-    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+    body = wait.until(EC.presence_of_element_located((By_TAG_NAME, 'body')))
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
 
@@ -225,30 +225,32 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
             monitor_idx = min(layout[0] - 1, len(monitors) - 1)
             rows, cols, position = layout[1], layout[2], layout[3]
             monitor = monitors[monitor_idx]
-            window_width = monitor.width // cols
-            window_height = monitor.height // rows
-            col = (position - 1) % cols  # 0-based column
-            row = (position - 1) // cols  # 0-based row
+            
+            # Base grid dimensions
+            base_width = monitor.width // cols
+            base_height = monitor.height // rows
+            col = (position - 1) % cols
+            row = (position - 1) // cols
 
-            # Initial position
-            x = monitor.x + col * window_width
-            y = monitor.y + row * window_height
+            # Distribute remainder to fill monitor completely
+            extra_width = monitor.width % cols
+            extra_height = monitor.height % rows
+            window_width = base_width + (1 if col < extra_width else 0)
+            window_height = base_height + (1 if row < extra_height else 0)
+
+            # Set size and get actual dimensions
             driver.set_window_size(window_width, window_height)
-            driver.set_window_position(x, y)
-
-            # Adjust for borders to eliminate gaps
             rect = driver.get_window_rect()
             actual_width = rect['width']
             actual_height = rect['height']
-            border_width = actual_width - window_width
-            border_height = actual_height - window_height
-            if col > 0:
-                x -= border_width * col  # Shift left to overlap borders
-            if row > 0:
-                y -= border_height * row  # Shift up to overlap borders
+
+            # Calculate position based on actual sizes, no gaps
+            x = monitor.x + sum(base_width + (1 if i < extra_width else 0) for i in range(col))
+            y = monitor.y + sum(base_height + (1 if i < extra_height else 0) for i in range(row))
             driver.set_window_position(x, y)
 
-            log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y})")
+            # Log final position
+            log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y}), size {actual_width}x{actual_height}")
         except Exception as e:
             log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange failed: {str(e)}")
 
