@@ -103,6 +103,7 @@ key_rebindings = {"c": "s", "s": "c"}
 - **Firefox Profile:** Toggle to `1` to use your main profile.
 - **Number of Windows:** Adjust how many windows open.
 - **Ignore Keys:** Define keys to block per window title *(e.g., `"Surzerker": ["c"]` stops `c` for titles containing "Surzerker")*. Edit the JSON to match your characters.
+- **Key Rebindings:** Rules for rebinding single keys *(e.g., `"s": ["c"]` rebinds the `s` key to send `c` within the script. Edit the JSON to match your characters.
 
 Changes persist across updates and apply on the next **Start** *(some, like profile settings, need a restart)*.
 
