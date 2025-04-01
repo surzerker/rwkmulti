@@ -25,7 +25,7 @@ DEFAULT_WINDOW_LAYOUTS = {
 DEFAULT_WINDOW_BORDER_OFFSET = 0  # Default: no offset
 
 # Current version
-VERSION = "1.5.1"
+VERSION = "1.5.2"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -239,9 +239,8 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 extra_height = monitor.height % rows
                 col = (position - 1) % cols
                 row = (position - 1) // cols
-                window_width = base_width + (1 if col < extra_width else 0) - window_border_offset
-                window_height = base_height + (1 if row < extra_height else 0) - window_border_offset
-
+                window_width = base_width + (1 if col < extra_width else 0) + window_border_offset
+                window_height = base_height + (1 if row < extra_height else 0) + window_border_offset
                 # Ensure minimum size
                 window_width = max(window_width, 100)  # Prevent too-small windows
                 window_height = max(window_height, 100)
