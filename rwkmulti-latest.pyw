@@ -14,16 +14,16 @@ DEFAULT_USE_DEFAULT_PROFILE = 0
 DEFAULT_NUM_GAME_WINDOWS = 4
 DEFAULT_IGNORE_KEYS = {"Surzerker": ["c"], "Spongebob": ["a"]}
 DEFAULT_KEY_REBINDINGS = {}
-DEFAULT_AUTO_ARRANGE = 0  # Off by default
+DEFAULT_AUTO_ARRANGE = 0
 DEFAULT_WINDOW_LAYOUTS = {
-    "0": [1, 2, 3, 1], "1": [1, 2, 3, 2], "2": [1, 2, 3, 3],  # Monitor 1, 2x3 grid
+    "0": [1, 2, 3, 1], "1": [1, 2, 3, 2], "2": [1, 2, 3, 3],
     "3": [1, 2, 3, 4], "4": [1, 2, 3, 5], "5": [1, 2, 3, 6],
-    "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],  # Monitor 2, 2x3 grid
+    "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],
     "9": [2, 2, 3, 4], "10": [2, 2, 3, 5], "11": [2, 2, 3, 6]
 }
 
 # Current version
-VERSION = "1.4.5"
+VERSION = "1.4.4"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti-latest.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -48,16 +48,17 @@ try:
     import keyboard
 except ImportError:
     missing_libs.append("keyboard")
-
 try:
     import screeninfo
 except ImportError:
     missing_libs.append("screeninfo")
 
 if missing_libs:
-    error_msg = "Missing libraries:\n\n" + "\n".join(f"- {lib}" for lib in missing_libs) + \
-                "\n\nInstall with:\n" + "\n".join(f"pip3 install {lib}" for lib in missing_libs) + \
-                "\n\nThen restart."
+    error_msg = "The following required libraries are missing:\n\n" + \
+                "\n".join(f"- {lib}" for lib in missing_libs) + \
+                "\n\nPlease install them by running these commands in your terminal:\n" + \
+                "\n".join(f"pip3 install {lib}" for lib in missing_libs) + \
+                "\n\nAfter installing, restart the script."
     messagebox.showerror("Missing Dependencies", error_msg)
     sys.exit(1)
 
