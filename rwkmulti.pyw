@@ -26,7 +26,7 @@ DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
 DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
 # Current version
-VERSION = "1.5.5"
+VERSION = "1.5.6"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -214,7 +214,8 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 firefox_profile = FirefoxProfile(default_profile)
                 firefox_profile.set_preference("signon.autofillForms", True)
                 firefox_profile.set_preference("signon.rememberSignons", True)
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile}")
+                firefox_profile.set_preference("layout.css.devPixelsPerPx", "0.6")  # Set zoom to 60%
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile} with 60% zoom")
             options.profile = firefox_profile
         driver = webdriver.Firefox(options=options)
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox launched")
@@ -224,10 +225,11 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
 
     driver.get(server_url)
     wait = WebDriverWait(driver, 10)
-    body = wait.until(EC.presence_of_element_located((By_TAG_NAME, 'body')))
+    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
 
+    log_queue.put(f"Process-{window_id+2}: Window {window_id} auto_arrange setting is {auto_arrange}")
     if auto_arrange:
         if str(window_id) in window_layouts:
             try:
@@ -237,7 +239,6 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 rows, cols, position = layout[1], layout[2], layout[3]
                 monitor = monitors[monitor_idx]
                 
-                # Base grid dimensions
                 base_width = monitor.width // cols
                 base_height = monitor.height // rows
                 extra_width = monitor.width % cols
@@ -247,17 +248,14 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 window_width = base_width + (1 if col < extra_width else 0) + window_border_offset_horizontal
                 window_height = base_height + (1 if row < extra_height else 0) + window_border_offset_vertical
 
-                # Ensure minimum size
                 window_width = max(window_width, 100)
                 window_height = max(window_height, 100)
 
-                # Set size
                 driver.set_window_size(window_width, window_height)
                 rect = driver.get_window_rect()
                 actual_width = rect['width']
                 actual_height = rect['height']
 
-                # Position without extra offset
                 x = monitor.x + sum(base_width + (1 if i < extra_width else 0) for i in range(col))
                 y = monitor.y + sum(base_height + (1 if i < extra_height else 0) for i in range(row))
                 driver.set_window_position(x, y)
@@ -266,7 +264,39 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
             except Exception as e:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange failed: {str(e)}")
         else:
-            log_queue.put(f"Process-{window_id+2}: Window {window_id} skipped auto-arrange: no layout defined")
+            log_queue.put(f"Process-{window_id+2}: Window {window_id} no layout defined, using fallback")
+            try:
+                # Fallback: Arrange in a 2xN grid on monitor 1
+                monitors = screeninfo.get_monitors()
+                monitor = monitors[0]  # Default to first monitor
+                rows = 2
+                cols = (window_id // rows) + 1
+                position = window_id + 1
+                col = (position - 1) % cols
+                row = (position - 1) // cols
+                
+                base_width = monitor.width // cols
+                base_height = monitor.height // rows
+                extra_width = monitor.width % cols
+                extra_height = monitor.height % rows
+                window_width = base_width + (1 if col < extra_width else 0) + window_border_offset_horizontal
+                window_height = base_height + (1 if row < extra_height else 0) + window_border_offset_vertical
+
+                window_width = max(window_width, 100)
+                window_height = max(window_height, 100)
+
+                driver.set_window_size(window_width, window_height)
+                rect = driver.get_window_rect()
+                actual_width = rect['width']
+                actual_height = rect['height']
+
+                x = monitor.x + sum(base_width + (1 if i < extra_width else 0) for i in range(col))
+                y = monitor.y + sum(base_height + (1 if i < extra_height else 0) for i in range(row))
+                driver.set_window_position(x, y)
+
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged (fallback) on Monitor 1 at ({x}, {y}), size {actual_width}x{actual_height}")
+            except Exception as e:
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} fallback arrange failed: {str(e)}")
     else:
         log_queue.put(f"Process-{window_id+2}: Window {window_id} auto-arrange disabled")
 
@@ -289,7 +319,7 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {remapped_key} to {window_title}")
                     except EC.StaleElementReferenceException:
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
-                        body = wait.until(EC.presence_of_element_located((By_TAG_NAME, 'body')))
+                        body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
                         ActionChains(driver).move_to_element(body).click().perform()
                         body.send_keys(selenium_key)
                         log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {remapped_key} to {window_title} after refresh")
