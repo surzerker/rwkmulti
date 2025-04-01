@@ -22,10 +22,10 @@ DEFAULT_WINDOW_LAYOUTS = {
     "6": [2, 2, 3, 1], "7": [2, 2, 3, 2], "8": [2, 2, 3, 3],
     "9": [2, 2, 3, 4], "10": [2, 2, 3, 5], "11": [2, 2, 3, 6]
 }
-DEFAULT_WINDOW_BORDER_OFFSET = 0  # New default: no offset
+DEFAULT_WINDOW_BORDER_OFFSET = 0  # Default: no offset
 
 # Current version
-VERSION = "1.5.0"
+VERSION = "1.5.1"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -232,15 +232,19 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 rows, cols, position = layout[1], layout[2], layout[3]
                 monitor = monitors[monitor_idx]
                 
-                # Base grid dimensions, adjusted for border offset
-                base_width = (monitor.width - window_border_offset * cols) // cols
-                base_height = (monitor.height - window_border_offset * rows) // rows
-                extra_width = (monitor.width - window_border_offset * cols) % cols
-                extra_height = (monitor.height - window_border_offset * rows) % rows
+                # Base grid dimensions
+                base_width = monitor.width // cols
+                base_height = monitor.height // rows
+                extra_width = monitor.width % cols
+                extra_height = monitor.height % rows
                 col = (position - 1) % cols
                 row = (position - 1) // cols
-                window_width = base_width + (1 if col < extra_width else 0)
-                window_height = base_height + (1 if row < extra_height else 0)
+                window_width = base_width + (1 if col < extra_width else 0) - window_border_offset
+                window_height = base_height + (1 if row < extra_height else 0) - window_border_offset
+
+                # Ensure minimum size
+                window_width = max(window_width, 100)  # Prevent too-small windows
+                window_height = max(window_height, 100)
 
                 # Set size
                 driver.set_window_size(window_width, window_height)
@@ -248,9 +252,9 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
                 actual_width = rect['width']
                 actual_height = rect['height']
 
-                # Position with offset to close gaps
-                x = monitor.x + sum(base_width + (1 if i < extra_width else 0) + window_border_offset for i in range(col))
-                y = monitor.y + sum(base_height + (1 if i < extra_height else 0) + window_border_offset for i in range(row))
+                # Position without extra offset
+                x = monitor.x + sum(base_width + (1 if i < extra_width else 0) for i in range(col))
+                y = monitor.y + sum(base_height + (1 if i < extra_height else 0) for i in range(row))
                 driver.set_window_position(x, y)
 
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} arranged on Monitor {monitor_idx + 1} at grid position {position} ({x}, {y}), size {actual_width}x{actual_height}, offset {window_border_offset}")
