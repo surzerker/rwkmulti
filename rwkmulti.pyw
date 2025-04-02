@@ -28,7 +28,7 @@ DEFAULT_WINDOW_BORDER_OFFSET_HORIZONTAL = 0
 DEFAULT_WINDOW_BORDER_OFFSET_VERTICAL = 0
 
 # Current version
-VERSION = "1.5.7"
+VERSION = "1.5.8"
 GITHUB_URL = "https://raw.githubusercontent.com/surzerker/rwkmulti/main/rwkmulti.pyw"
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "rwkmulti_settings.cfg")
 
@@ -50,9 +50,9 @@ try:
 except ImportError:
     missing_libs.append("selenium")
 try:
-    import keyboard
+    from pynput import keyboard
 except ImportError:
-    missing_libs.append("keyboard")
+    missing_libs.append("pynput")
 try:
     import screeninfo
 except ImportError:
@@ -130,12 +130,11 @@ def check_for_updates(log_queue):
         log_queue.put(f"MainProcess: Requesting {url_with_timestamp}")
         response = requests.get(url_with_timestamp, headers=headers, timeout=5, allow_redirects=True)
         response.raise_for_status()
-        remote_content = response.content  # Use raw bytes
+        remote_content = response.content
         log_queue.put("MainProcess: Successfully fetched remote file")
         
-        # Primary version check
         remote_version = None
-        for line in remote_content.decode('utf-8').splitlines():  # Decode for version parsing
+        for line in remote_content.decode('utf-8').splitlines():
             if line.strip().startswith('VERSION = "'):
                 remote_version = line.strip().split('"')[1]
                 log_queue.put(f"MainProcess: Found remote version: {remote_version}")
@@ -157,7 +156,7 @@ def check_for_updates(log_queue):
                 log_queue.put("MainProcess: User chose to update")
                 script_path = sys.argv[0]
                 log_queue.put(f"MainProcess: Updating file at {script_path}")
-                with open(script_path, "wb") as f:  # Binary write
+                with open(script_path, "wb") as f:
                     f.write(remote_content)
                     f.flush()
                     os.fsync(f.fileno())
@@ -171,7 +170,7 @@ def check_for_updates(log_queue):
         else:
             log_queue.put("MainProcess: No update needed based on version (remote <= local)")
             log_queue.put("MainProcess: Performing checksum comparison...")
-            remote_hash = hashlib.sha256(remote_content).hexdigest()  # Hash raw bytes
+            remote_hash = hashlib.sha256(remote_content).hexdigest()
             script_path = sys.argv[0]
             with open(script_path, "rb") as f:
                 local_content = f.read()
@@ -185,7 +184,7 @@ def check_for_updates(log_queue):
                                        "This suggests the current release may have updates not reflected in the version.\n"
                                        "Download and update now?"):
                     log_queue.put("MainProcess: User chose to update due to checksum mismatch")
-                    with open(script_path, "wb") as f:  # Binary write
+                    with open(script_path, "wb") as f:
                         f.write(remote_content)
                         f.flush()
                         os.fsync(f.fileno())
@@ -204,34 +203,77 @@ def check_for_updates(log_queue):
     except Exception as e:
         log_queue.put(f"MainProcess: Update error: {str(e)}")
 
-def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue, key_rebindings):
-    pressed_keys = {}
+def monitor_keyboard_process(key_queues, is_running_flag, is_paused_flag, log_queue, key_rebindings, ignore_keys, window_titles):
+    pressed_keys = set()
     log_queue.put("Process-1: Keyboard process started")
+    listener = None
+
+    def on_press(key):
+        if not is_running_flag.value or is_paused_flag.value:
+            return
+        
+        try:
+            original_key = key.char if hasattr(key, 'char') and key.char else str(key).replace("Key.", "").lower()
+            if original_key in pressed_keys:
+                return
+            
+            pressed_keys.add(original_key)
+            remapped_key = key_rebindings.get(original_key, original_key)
+            
+            for i, q in enumerate(key_queues):
+                title = window_titles[i].lower() if i < len(window_titles) else ""
+                log_queue.put(f"Process-1: Checking title for queue {i}: '{title}'")
+                should_ignore = any(
+                    remapped_key.lower() in [k.lower() for k in keys]  # Check remapped_key instead of original_key
+                    for pattern, keys in ignore_keys.items()
+                    if pattern.lower() in title
+                )
+                log_queue.put(f"Process-1: Should ignore '{remapped_key}' (from '{original_key}') for '{title}': {should_ignore}")
+                if not should_ignore:
+                    while q.qsize() >= 2:
+                        try:
+                            q.get_nowait()
+                        except queue.Empty:
+                            break
+                    q.put(remapped_key)
+                    log_queue.put(f"Process-1: Sent {remapped_key} (from {original_key}) to queue {i}")
+        except AttributeError:
+            pass
+
+    def on_release(key):
+        try:
+            original_key = key.char if hasattr(key, 'char') and key.char else str(key).replace("Key.", "").lower()
+            if original_key in pressed_keys:
+                pressed_keys.remove(original_key)
+        except AttributeError:
+            pass
+
+    # Start with suppress=True when running
+    listener = keyboard.Listener(on_press=on_press, on_release=on_release, suppress=True)
+    listener.start()
+    current_suppress = True
+
     while is_running_flag.value:
-        if not is_paused_flag.value:
-            event = keyboard.read_event(suppress=True)
-            original_key = event.name
-            if event.event_type == keyboard.KEY_DOWN:
-                if original_key.lower() not in pressed_keys:
-                    pressed_keys[original_key.lower()] = True
-                    remapped_key = key_rebindings.get(original_key.lower(), original_key)
-                    for i, q in enumerate(key_queues):
-                        while q.qsize() >= 2:
-                            try:
-                                q.get_nowait()
-                            except queue.Empty:
-                                break
-                        q.put((original_key, remapped_key))
-                        if original_key.lower() != remapped_key.lower():
-                            log_queue.put(f"Process-1: Sent {remapped_key} (rebound from {original_key}) to queue {i}")
-                        else:
-                            log_queue.put(f"Process-1: Sent {original_key} to queue {i}")
-            elif event.event_type == keyboard.KEY_UP:
-                if original_key.lower() in pressed_keys:
-                    del pressed_keys[original_key.lower()]
+        if is_paused_flag.value and current_suppress:
+            # Pause: stop listener and restart with suppress=False
+            listener.stop()
+            listener = keyboard.Listener(on_press=on_press, on_release=on_release, suppress=False)
+            listener.start()
+            current_suppress = False
+            log_queue.put("Process-1: Input suppression disabled (paused)")
+        elif not is_paused_flag.value and not current_suppress:
+            # Resume: stop listener and restart with suppress=True
+            listener.stop()
+            listener = keyboard.Listener(on_press=on_press, on_release=on_release, suppress=True)
+            listener.start()
+            current_suppress = True
+            log_queue.put("Process-1: Input suppression enabled (resumed)")
+        time.sleep(0.05)
+    
+    listener.stop()
     log_queue.put("Process-1: Keyboard process exiting")
 
-def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile, auto_arrange, window_layouts, window_border_offset_horizontal, window_border_offset_vertical):
+def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore_keys, log_queue, server_url, use_default_profile, auto_arrange, window_layouts, window_border_offset_horizontal, window_border_offset_vertical, window_titles, index):
     special_keys_map = {
         'up': Keys.ARROW_UP, 'down': Keys.ARROW_DOWN,
         'left': Keys.ARROW_LEFT, 'right': Keys.ARROW_RIGHT,
@@ -239,20 +281,27 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     log_queue.put(f"Process-{window_id+2}: Window {window_id} initializing Firefox")
     try:
         options = Options()
+        firefox_profile = FirefoxProfile()
+        firefox_profile.set_preference("layers.acceleration.force-enabled", True)
+        firefox_profile.set_preference("gfx.webrender.all", True)
+        
         if use_default_profile:
             profile_path = os.path.join(os.environ.get('APPDATA', ''), 'Mozilla', 'Firefox', 'Profiles')
             profile_dirs = [d for d in os.listdir(profile_path) if os.path.isdir(os.path.join(profile_path, d)) and 'default-release' in d]
             if not profile_dirs:
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} no default-release profile found, using temporary profile")
-                firefox_profile = FirefoxProfile()
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} no default-release profile found, using temporary profile with GPU acceleration")
             else:
                 default_profile = os.path.join(profile_path, profile_dirs[0])
                 firefox_profile = FirefoxProfile(default_profile)
+                firefox_profile.set_preference("layers.acceleration.force-enabled", True)
+                firefox_profile.set_preference("gfx.webrender.all", True)
                 firefox_profile.set_preference("signon.autofillForms", True)
                 firefox_profile.set_preference("signon.rememberSignons", True)
-
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile}")
-            options.profile = firefox_profile
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} using default profile copy from {default_profile} with GPU acceleration")
+        else:
+            log_queue.put(f"Process-{window_id+2}: Window {window_id} using temporary profile with GPU acceleration")
+        
+        options.profile = firefox_profile
         driver = webdriver.Firefox(options=options)
         log_queue.put(f"Process-{window_id+2}: Window {window_id} Firefox launched")
     except Exception as e:
@@ -265,14 +314,20 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     driver.switch_to.window(driver.window_handles[0])
     ActionChains(driver).move_to_element(body).click().perform()
 
+    # Update shared titles list
+    window_titles[index] = driver.title
+    log_queue.put(f"Process-{window_id+2}: Set title for window {window_id} to '{driver.title}'")
+
     log_queue.put(f"Process-{window_id+2}: Window {window_id} auto_arrange setting is {auto_arrange}")
     if auto_arrange:
         if str(window_id) in window_layouts:
             try:
                 monitors = screeninfo.get_monitors()
-                layout = window_layouts[str(window_id)]  # [monitor, rows, cols, position]
+                layout = window_layouts[str(window_id)]
                 monitor_idx = min(layout[0] - 1, len(monitors) - 1)
-                rows, cols, position = layout[1], layout[2], layout[3]
+                rows = layout[1]
+                cols = layout[2]
+                position = layout[3]
                 monitor = monitors[monitor_idx]
                 
                 base_width = monitor.width // cols
@@ -302,9 +357,8 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
         else:
             log_queue.put(f"Process-{window_id+2}: Window {window_id} no layout defined, using fallback")
             try:
-                # Fallback: Arrange in a 2xN grid on monitor 1
                 monitors = screeninfo.get_monitors()
-                monitor = monitors[0]  # Default to first monitor
+                monitor = monitors[0]
                 rows = 2
                 cols = (window_id // rows) + 1
                 position = window_id + 1
@@ -340,29 +394,24 @@ def window_process(key_queue, is_running_flag, is_paused_flag, window_id, ignore
     while is_running_flag.value:
         if not is_paused_flag.value:
             try:
-                original_key, remapped_key = key_queue.get(timeout=0.05)
-                log_queue.put(f"Process-{window_id+2}: Window {window_id} got key: {remapped_key} (from {original_key})")
-                selenium_key = special_keys_map.get(remapped_key.lower(), remapped_key)
-                window_title = driver.title.lower()
-                should_ignore = any(
-                    original_key.lower() in [k.lower() for k in keys]
-                    for pattern, keys in ignore_keys.items()
-                    if pattern.lower() in window_title
-                )
-                if not should_ignore:
-                    try:
-                        body.send_keys(selenium_key)
-                        log_queue.put(f"Process-{window_id+2}: Window {window_id} sending {remapped_key} to {window_title}")
-                    except EC.StaleElementReferenceException:
-                        log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
-                        body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
-                        ActionChains(driver).move_to_element(body).click().perform()
-                        body.send_keys(selenium_key)
-                        log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {remapped_key} to {window_title} after refresh")
+                key = key_queue.get(timeout=0.05)
+                log_queue.put(f"Process-{window_id+2}: Window {window_id} got key: {key}")
+                selenium_key = special_keys_map.get(key.lower(), key)
+                try:
+                    body.send_keys(selenium_key)
+                    log_queue.put(f"Process-{window_id+2}: Window {window_id} sent {key} to {driver.title}")
+                except EC.StaleElementReferenceException:
+                    log_queue.put(f"Process-{window_id+2}: Window {window_id} stale element detected, refreshing body")
+                    body = wait.until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                    ActionChains(driver).move_to_element(body).click().perform()
+                    body.send_keys(selenium_key)
+                    log_queue.put(f"Process-{window_id+2}: Window {window_id} resent {key} to {driver.title} after refresh")
             except queue.Empty:
                 continue
             except Exception as e:
                 log_queue.put(f"Process-{window_id+2}: Window {window_id} error sending keys: {str(e)}")
+        # Update title periodically for post-login changes
+        window_titles[index] = driver.title
         time.sleep(0.01)
     driver.quit()
     log_queue.put(f"Process-{window_id+2}: Window {window_id} process exiting")
@@ -387,7 +436,6 @@ class ConfigWindow:
         self.window_border_offset_horizontal = StringVar(value=str(window_border_offset_horizontal))
         self.window_border_offset_vertical = StringVar(value=str(window_border_offset_vertical))
         
-        # Left column (col 0-1)
         Label(self.top, text="Server URL:").grid(row=0, column=0, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.server_url, width=30).grid(row=0, column=1, sticky="w", padx=5, pady=5)
         
@@ -401,7 +449,6 @@ class ConfigWindow:
         Label(self.top, text="Horizontal Offset (px):").grid(row=4, column=0, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.window_border_offset_horizontal, width=10).grid(row=4, column=1, sticky="w", padx=5, pady=5)
         
-        # Right column (col 2-3)
         Label(self.top, text="Key Ignore Settings (JSON):").grid(row=1, column=2, sticky="e", padx=5, pady=5)
         self.ignore_text = Text(self.top, height=5, width=35, wrap=WORD)
         self.ignore_text.insert(END, json.dumps(self.ignore_keys, indent=2))
@@ -420,11 +467,9 @@ class ConfigWindow:
         Label(self.top, text="Vertical Offset (px):").grid(row=4, column=2, sticky="e", padx=5, pady=5)
         Entry(self.top, textvariable=self.window_border_offset_vertical, width=10).grid(row=4, column=3, sticky="w", padx=5, pady=5)
 
-        # Buttons across bottom
         Button(self.top, text="Save and Close", command=self.save).grid(row=5, column=0, columnspan=2, pady=10)
         Button(self.top, text="Clear Temp Data", command=self.clear_temp_data).grid(row=5, column=2, columnspan=2, pady=10)
 
-        # Context menu for text widgets
         self.context_menu = Menu(self.top, tearoff=0)
         self.context_menu.add_command(label="Cut", command=self.cut)
         self.context_menu.add_command(label="Copy", command=self.copy)
@@ -433,13 +478,11 @@ class ConfigWindow:
             widget.bind("<Button-3>", self.show_context_menu)
 
     def clear_temp_data(self):
-        """Clear Selenium temporary profile folders from the temp directory."""
-        temp_dir = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Temp')  # C:\Users\<username>\AppData\Local\Temp
+        temp_dir = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Temp')
         deleted_count = 0
         total_size = 0
         try:
             for folder in os.listdir(temp_dir):
-                # Match 'rust_mozprofile*' and 'tmp*' folders
                 if folder.startswith('rust_mozprofile') or folder.startswith('tmp'):
                     folder_path = os.path.join(temp_dir, folder)
                     try:
@@ -452,7 +495,7 @@ class ConfigWindow:
                     except Exception as e:
                         self.app.log_queue.put(f"Config: Failed to delete {folder_path}: {str(e)}")
             if deleted_count > 0:
-                size_mb = total_size / (1024 * 1024)  # Convert bytes to MB
+                size_mb = total_size / (1024 * 1024)
                 self.app.log_queue.put(f"Config: Cleared {deleted_count} temp folders, freed {size_mb:.2f} MB")
             else:
                 self.app.log_queue.put("Config: No Selenium temp folders found to clear")
@@ -580,16 +623,25 @@ class RWKMultiClient:
         self.key_queues = [mp.Queue(maxsize=2) for _ in range(self.num_game_windows)]
         self.is_running_flag = mp.Value('b', True)
         self.is_paused_flag = mp.Value('b', True)
-        keyboard_process = mp.Process(target=monitor_keyboard_process, args=(self.key_queues, self.is_running_flag, self.is_paused_flag, self.log_queue, self.key_rebindings))
-        keyboard_process.daemon = True
-        keyboard_process.start()
-        self.processes.append(keyboard_process)
+        
+        # Use Manager.list for shared window titles
+        manager = mp.Manager()
+        self.window_titles = manager.list([''] * self.num_game_windows)
+        
+        # Start window processes
         for i in range(self.num_game_windows):
-            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile, self.auto_arrange, self.window_layouts, self.window_border_offset_horizontal, self.window_border_offset_vertical))
+            p = mp.Process(target=window_process, args=(self.key_queues[i], self.is_running_flag, self.is_paused_flag, i, self.ignore_keys, self.log_queue, self.server_url, self.use_default_profile, self.auto_arrange, self.window_layouts, self.window_border_offset_horizontal, self.window_border_offset_vertical, self.window_titles, i))
             p.daemon = True
             p.start()
             self.processes.append(p)
             time.sleep(0.5)
+        
+        # Start keyboard process
+        keyboard_process = mp.Process(target=monitor_keyboard_process, args=(self.key_queues, self.is_running_flag, self.is_paused_flag, self.log_queue, self.key_rebindings, self.ignore_keys, self.window_titles))
+        keyboard_process.daemon = True
+        keyboard_process.start()
+        self.processes.append(keyboard_process)
+        
         self.log_queue.put(f"MainProcess: Started {self.num_game_windows} window processes")
 
     def pause(self):
@@ -630,7 +682,7 @@ class RWKMultiClient:
 
 def show_error_popup(title, message):
     root = Tk()
-    root.withdraw()  # Hide root window
+    root.withdraw()
     top = Toplevel()
     top.title(title)
     top.geometry("400x300")
