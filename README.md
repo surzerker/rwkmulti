@@ -17,7 +17,7 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 
 - **Firefox GPU Acceleration**: Firefox windows will now attempt to launch with hardware acceleration mode enabled to offload some page rendering to an available GPU.
 - **Replaced Keyboard Library**: Replaced the windows-only "keyboard" library with pynput which is compatible with Linux and should dramatically improve performance.
-- **Key Suppression**: Due to technical limitations and for added safety, keyboard inputs outside RWK are suppressed unless rwkmulti is paused.
+- **Key Suppression**: Due to technical limitations and for added safety, key inputs outside RWK are blocked unless script is paused.
 
 ### [Versions 1.4.4 to 1.5.7]
 
