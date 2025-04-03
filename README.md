@@ -13,6 +13,10 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 - Windows 11 users typically don’t need GeckoDriver—Selenium works directly with Firefox.
 
 ## What’s New
+### [Version 1.5.8]
+
+- **Firefox GPU Acceleration**: Firefox windows will now attempt to launch with hardware acceleration mode enabled to offload some page rendering to an available GPU.
+- **Replaced Keyboard Library**: Replaced the windows-only "keyboard" library with pynput which is compatible with Linux and should dramatically improve performance.
 
 ### [Versions 1.4.4 to 1.5.7]
 
@@ -46,11 +50,11 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 Install via pip:
 
 ```bash
-pip install selenium keyboard requests
+pip install selenium pynput requests
 ```
 
 - **`selenium`**: Drives Firefox automation.
-- **`keyboard`**: Captures and sends keystrokes.
+- **`pynput`**: Captures and sends keystrokes.
 - **`requests`**: Enables auto-updates.
 
 ### Firefox Browser
