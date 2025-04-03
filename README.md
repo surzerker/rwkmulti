@@ -22,7 +22,7 @@ This software is provided **"as is,"** with no warranties, express or implied. T
 Install via pip:
 
 ```bash
-pip install selenium pynput requests
+pip3 install selenium pynput requests
 ```
 
 - **`selenium`**: Drives Firefox automation.
@@ -102,8 +102,7 @@ window_layouts = {
 
 - **Keys Scroll Pages:** Update Firefox.
 - **GeckoDriver Issues:** Usually unnecessary on Windows 11.
-- **Missing Libraries:** Install via pip.
-- **No Auto-Update:** Ensure `requests` is installed.
+- **Missing Libraries:** Install via pip3 in an administrator console.
 - **Config Not Saving:** Edit manually, then restart or re-open Config window.
 - **Checksum Mismatch Prompt:** Accept update if prompted after launch.
 
